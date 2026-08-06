@@ -2,6 +2,8 @@ from pydantic import BaseModel, EmailStr
 from datetime import date
 from decimal import Decimal
 from typing import Optional
+from pydantic import BaseModel
+
 
 
 class UserCreate(BaseModel):
@@ -27,3 +29,8 @@ class UserUpdate(BaseModel):
     district: str
     occupation: Optional[str] = None
     annual_income: Decimal        
+
+class RecommendationRequest(BaseModel):
+    user_id: int
+    service_type: str
+    query: str    

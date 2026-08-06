@@ -147,3 +147,30 @@ def update_profile(user_id: int, updated_user: schemas.UserUpdate, db: Session =
     return {
         "message": "Profile updated successfully"
     }
+
+@app.post("/recommend-services")
+def recommend_services(
+    data: schemas.RecommendationRequest,
+    db: Session = Depends(get_db)
+):
+
+    user = db.query(models.User).filter(
+        models.User.user_id == data.user_id
+    ).first()
+
+    if not user:
+
+        return {
+            "message": "User not found"
+        }
+
+    return {
+        "message": "User fetched successfully",
+        "user": {
+            "name": user.full_name,
+            "category": user.category,
+            "income": float(user.annual_income),
+            "occupation": user.occupation,
+            "state": user.state
+        }
+    }

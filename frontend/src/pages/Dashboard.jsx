@@ -16,6 +16,9 @@ function Dashboard() {
             <Link to="/profile">
                 <button>View Profile</button>
             </Link>
+            <Link to="/recommend">
+                <button>AI Government Service Recommendation</button>
+            </Link>
 
         </div>
     );
