@@ -2,12 +2,14 @@ from sqlalchemy import (
     Column,
     Integer,
     String,
+    Text,
     Date,
     Numeric,
     TIMESTAMP
 )
 from sqlalchemy.sql import func
 from database import Base
+from sqlalchemy.sql import or_
 
 
 class User(Base):
@@ -37,3 +39,36 @@ class User(Base):
 
     # Record Creation Time
     created_at = Column(TIMESTAMP, server_default=func.now())
+
+class GovernmentService(Base):
+    __tablename__ = "government_services"
+
+    service_id = Column(Integer, primary_key=True, index=True)
+
+    service_name = Column(String(150), nullable=False)
+
+    department = Column(String(100))
+
+    description = Column(Text)
+
+    eligibility = Column(Text)
+
+    required_documents = Column(Text)
+
+    application_link = Column(String(255))
+
+    category = Column(String(100))
+
+    service_type = Column(String(100))
+
+    age_min = Column(Integer)
+
+    age_max = Column(Integer)
+
+    income_limit = Column(Numeric(12,2))
+
+    occupation = Column(String(100))
+
+    state = Column(String(100))
+
+    created_at = Column(TIMESTAMP, server_default=func.now())    

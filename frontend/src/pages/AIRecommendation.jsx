@@ -10,7 +10,8 @@ function AIRecommendation() {
     });
 
     const [profile, setProfile] = useState(null);
-
+    const [result, setResult] = useState(null);
+    const [loading, setLoading] = useState(false);
     useEffect(() => {
 
     const fetchProfile = async () => {
@@ -57,20 +58,27 @@ function AIRecommendation() {
 
     try {
 
+        setLoading(true);
+        setResult(null);
+
         const response = await api.post(
             "/recommend-services",
             requestData
         );
 
-        console.log(response.data);
+        setResult(response.data);
 
     } catch (error) {
 
         console.log(error.response?.data);
 
-    }
+    } finally {
 
-};
+        setLoading(false);
+
+    }
+ };
+
 
     return (
 
@@ -152,6 +160,22 @@ function AIRecommendation() {
                 </button>
 
             </form>
+
+            {loading && (
+                 <p>Finding the best services for you...</p>
+            )}
+
+            {result && (
+              <div>
+
+                 <h3>✨ AI Recommendation</h3>
+
+                <p>
+                    {result.ai_recommendation}
+                </p>
+
+              </div>
+            )}
 
         </div>
 

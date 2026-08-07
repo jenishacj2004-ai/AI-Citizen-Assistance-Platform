@@ -2,6 +2,9 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import date
+from sqlalchemy import or_
+from gemini_service import generate_recommendation
 
 import models
 import schemas
@@ -154,23 +157,81 @@ def recommend_services(
     db: Session = Depends(get_db)
 ):
 
+    # Fetch logged-in user
     user = db.query(models.User).filter(
         models.User.user_id == data.user_id
     ).first()
-
+    
     if not user:
+        return {"message": "User not found"}
+    today = date.today()
 
-        return {
-            "message": "User not found"
-        }
+    age = today.year - user.dob.year
+
+    if (today.month, today.day) < (user.dob.month, user.dob.day):
+     age -= 1
+    # Search services by selected service type
+    services = db.query(models.GovernmentService).filter(
+
+    models.GovernmentService.service_type == data.service_type,
+
+    or_(
+        models.GovernmentService.state == user.state,
+        models.GovernmentService.state == "All"
+    ),
+
+    or_(
+        models.GovernmentService.occupation == user.occupation,
+        models.GovernmentService.occupation == "Any"
+    ),
+
+    models.GovernmentService.income_limit >= user.annual_income,
+
+    models.GovernmentService.age_min <= age,
+
+    models.GovernmentService.age_max >= age
+
+    ).all()
+    
+
+    # Prepare user profile for Gemini
+    user_profile = {
+        "age": age,
+        "gender": user.gender,
+        "occupation": user.occupation,
+        "annual_income": float(user.annual_income),
+        "category": user.category,
+        "state": user.state
+    }
+
+    # Prepare matching services
+    service_data = []
+
+    for service in services:
+        service_data.append({
+            "service_name": service.service_name,
+            "department": service.department,
+            "description": service.description,
+            "eligibility": service.eligibility,
+            "required_documents": service.required_documents,
+            "application_link": service.application_link
+        })
+
+    # Generate AI recommendation
+    ai_response = generate_recommendation(
+        user_profile,
+        service_data,
+        data.query
+    )
 
     return {
-        "message": "User fetched successfully",
-        "user": {
-            "name": user.full_name,
-            "category": user.category,
-            "income": float(user.annual_income),
-            "occupation": user.occupation,
-            "state": user.state
-        }
+        "user_state": user.state,
+        "user_occupation": user.occupation,
+        "user_income": float(user.annual_income),
+        "user_category": user.category,
+        "user_age": age,
+        "count": len(services),
+        "services": service_data,
+        "ai_recommendation": ai_response
     }
+
