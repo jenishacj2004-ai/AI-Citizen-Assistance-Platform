@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
@@ -25,11 +26,9 @@ function Login() {
 
       alert(response.data.message);
 
-      // Temporary login storage
       localStorage.setItem("user_id", response.data.user_id);
       localStorage.setItem("user_name", response.data.name);
 
-      // Go to dashboard
       navigate("/dashboard");
     } catch (error) {
       if (error.response) {
@@ -41,32 +40,41 @@ function Login() {
   };
 
   return (
-    <div>
-      <h2>User Login Page</h2>
+    <div className="login-container">
+      <div className="login-card">
+        <h2>Welcome Back</h2>
+        <p className="login-subtitle">Login to your account</p>
 
-      <form onSubmit={handleSubmit}>
-        <label>Email</label><br />
-        <input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-          required
-        />
-        <br /><br />
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Email</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter your email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <label>Password</label><br />
-        <input
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-          required
-        />
-        <br /><br />
+          <div className="form-group">
+            <label>Password</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="Enter your password"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
 
-        <button type="submit">Login</button>
-      </form>
+          <button type="submit" className="login-button">
+            Login
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

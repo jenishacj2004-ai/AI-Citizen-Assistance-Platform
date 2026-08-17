@@ -150,6 +150,82 @@ def update_profile(user_id: int, updated_user: schemas.UserUpdate, db: Session =
     return {
         "message": "Profile updated successfully"
     }
+@app.get("/eligible-services/{user_id}")
+def get_eligible_services(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    # Fetch user
+    user = db.query(models.User).filter(
+        models.User.user_id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    # Calculate age
+    today = date.today()
+
+    age = today.year - user.dob.year
+
+    if (today.month, today.day) < (user.dob.month, user.dob.day):
+        age -= 1
+
+    # Find all services matching profile
+    services = db.query(
+        models.GovernmentService
+    ).filter(
+
+        or_(
+            models.GovernmentService.state == user.state,
+            models.GovernmentService.state == "All"
+        ),
+
+        or_(
+            models.GovernmentService.occupation == user.occupation,
+            models.GovernmentService.occupation == "Any"
+        ),
+
+        models.GovernmentService.income_limit >= user.annual_income,
+
+        models.GovernmentService.age_min <= age,
+
+        models.GovernmentService.age_max >= age
+
+    ).all()
+
+    service_data = []
+
+    for service in services:
+        service_data.append({
+            "service_name": service.service_name,
+            "service_type": service.service_type,
+            "department": service.department,
+            "description": service.description,
+            "eligibility": service.eligibility,
+            "required_documents": service.required_documents,
+            "application_link": service.application_link
+        })
+
+    print("ELIGIBLE SERVICES:")
+    for service in service_data:
+        print(service["service_name"])
+
+    return {
+        "user_id": user.user_id,
+        "user_state": user.state,
+        "user_occupation": user.occupation,
+        "user_income": float(user.annual_income),
+        "user_category": user.category,
+        "user_age": age,
+        "count": len(service_data),
+        "services": service_data
+    }
+
+
 
 @app.post("/recommend-services")
 def recommend_services(
@@ -193,7 +269,9 @@ def recommend_services(
 
     ).all()
     
-
+    print("ELIGIBLE SERVICES:")
+    for service in services:
+     print(service.service_name)
     # Prepare user profile for Gemini
     user_profile = {
         "age": age,

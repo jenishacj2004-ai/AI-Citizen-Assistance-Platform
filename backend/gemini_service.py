@@ -1,4 +1,6 @@
 import os
+import json
+import re
 from dotenv import load_dotenv
 from google import genai
 
@@ -9,73 +11,160 @@ api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key)
 
 
+def normalize_text(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+
+    words = text.split()
+
+    stop_words = {
+        "i", "need", "want", "a", "an", "the",
+        "for", "to", "my", "me", "please",
+        "can", "get", "give", "help", "with"
+    }
+
+    words = [word for word in words if word not in stop_words]
+
+    return " ".join(words)
+
+
 def generate_recommendation(user_profile, services, query):
 
- prompt = f"""
-  You are an AI government service recommendation assistant.
+    normalized_query = normalize_text(query)
 
-  Your job is to help citizens find the MOST RELEVANT government services
-  from the eligible services provided below.
+    # --------------------------------------------------
+    # 1. Direct service-name matching
+    # --------------------------------------------------
 
-  CITIZEN PROFILE:
-  Age: {user_profile["age"]}
-  Gender: {user_profile["gender"]}
-  Occupation: {user_profile["occupation"]}
-  Annual Income: {user_profile["annual_income"]}
-  Category: {user_profile["category"]}
-  State: {user_profile["state"]}
+    direct_matches = []
 
-  CITIZEN REQUIREMENT:
-   {query}
+    for service in services:
 
-  ELIGIBLE SERVICES:
-  {services}
+        service_name = normalize_text(
+            service["service_name"]
+        )
 
-  IMPORTANT RULES:
+        if service_name in normalized_query:
 
-  1. Recommend only services from the provided eligible services.
-  2. Do NOT invent services or information.
-  3. Relevance to the citizen's requirement is the MOST IMPORTANT factor.
-  4. Do NOT recommend a service just because the citizen is technically eligible.
-  5. If none of the services are relevant to the citizen's requirement,
-   clearly say:
-   "No closely matching government service was found for your requirement."
-  6. Keep the response SHORT and easy to understand.
-  7. Do not write long paragraphs.
-  8. Do not include unnecessary explanations.
+            direct_matches.append(service)
 
-  For each relevant service, use exactly this format:
+    # --------------------------------------------------
+    # 2. Keyword matching
+    # --------------------------------------------------
 
-  SERVICE: <service name>
+    if not direct_matches:
 
-  WHY IT IS RELEVANT:
-  <1-2 short sentences>
+        query_words = set(normalized_query.split())
 
-  BENEFIT:
-  <1 short sentence>
+        for service in services:
 
-  REQUIRED DOCUMENTS:
-  <comma-separated documents>
+            service_name = normalize_text(
+                service["service_name"]
+            )
 
-  HOW TO APPLY:
-  <1 short sentence>
+            service_words = set(service_name.split())
 
-  APPLICATION LINK:
-  <link>
+            common_words = query_words.intersection(
+                service_words
+            )
 
-  If there are multiple relevant services, list them separately.
+            if len(common_words) >= 1:
 
-  At the end, provide:
+                direct_matches.append(service)
 
-  BEST MATCH:
-  <name of the most relevant service>
+    # --------------------------------------------------
+    # 3. If direct match found, return it
+    # --------------------------------------------------
 
-  Do not use Markdown tables.
+    if direct_matches:
+
+        recommendations = []
+
+        for service in direct_matches:
+
+            recommendations.append({
+                "service_name": service["service_name"],
+                "why_recommended":
+                    f"This service directly matches your requirement for {service['service_name']}.",
+                "benefits":
+                    service["description"],
+                "required_documents":
+                    service["required_documents"].split(","),
+                "how_to_apply":
+                    "Apply through the official government portal.",
+                "application_link":
+                    service["application_link"]
+            })
+
+        return {
+            "status": "success",
+            "recommendations": recommendations
+        }
+
+    # --------------------------------------------------
+    # 4. No direct match → use Gemini
+    # --------------------------------------------------
+
+    prompt = f"""
+You are an AI government service recommendation assistant.
+
+The backend has already checked the citizen's eligibility.
+
+Your ONLY task is to identify which of the eligible services
+are relevant to the citizen's requirement.
+
+CITIZEN REQUIREMENT:
+{query}
+
+ELIGIBLE SERVICES:
+{services}
+
+RULES:
+
+1. Recommend ONLY services from the provided list.
+2. Never invent a service.
+3. Do not recommend unrelated services.
+4. Consider the meaning of the user's requirement.
+5. Return only genuinely relevant services.
+6. If none are relevant, return an empty recommendations list.
+7. Return ONLY valid JSON.
+
+Return exactly:
+
+{{
+    "status": "success",
+    "recommendations": [
+        {{
+            "service_name": "Service name",
+            "why_recommended": "One short sentence",
+            "benefits": "One short sentence",
+            "required_documents": ["Document 1", "Document 2"],
+            "how_to_apply": "One short sentence",
+            "application_link": "Link"
+        }}
+    ]
+}}
+
+If nothing is relevant:
+
+{{
+    "status": "no_match",
+    "recommendations": []
+}}
 """
 
-
- response = client.models.generate_content(
+    response = client.models.generate_content(
         model="gemini-3.6-flash",
         contents=prompt
     )
- return response.text
+
+    try:
+
+        return json.loads(response.text)
+
+    except json.JSONDecodeError:
+
+        return {
+            "status": "no_match",
+            "recommendations": []
+        }
