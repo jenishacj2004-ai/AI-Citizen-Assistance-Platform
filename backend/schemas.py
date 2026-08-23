@@ -1,9 +1,8 @@
-from pydantic import BaseModel, EmailStr
 from datetime import date
 from decimal import Decimal
 from typing import Optional
-from pydantic import BaseModel
 
+from pydantic import BaseModel, EmailStr
 
 
 class UserCreate(BaseModel):
@@ -19,18 +18,20 @@ class UserCreate(BaseModel):
     occupation: Optional[str] = None
     annual_income: Decimal
 
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
 
 class UserUpdate(BaseModel):
     phone: str
     state: str
     district: str
     occupation: Optional[str] = None
-    annual_income: Decimal        
+    annual_income: Decimal
+
 
 class RecommendationRequest(BaseModel):
     user_id: int
-    service_type: str
-    query: str    
+    query: str

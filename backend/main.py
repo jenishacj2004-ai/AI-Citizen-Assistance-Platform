@@ -232,62 +232,72 @@ def recommend_services(
     data: schemas.RecommendationRequest,
     db: Session = Depends(get_db)
 ):
-
     # Fetch logged-in user
     user = db.query(models.User).filter(
         models.User.user_id == data.user_id
     ).first()
-    
+
     if not user:
-        return {"message": "User not found"}
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    # Calculate age
     today = date.today()
 
     age = today.year - user.dob.year
 
     if (today.month, today.day) < (user.dob.month, user.dob.day):
-     age -= 1
-    # Search services by selected service type
-    services = db.query(models.GovernmentService).filter(
+        age -= 1
 
-    models.GovernmentService.service_type == data.service_type,
+    # Get services applicable to the user's profile.
+    # No service type is selected by the citizen.
+    services = db.query(
+        models.GovernmentService
+    ).filter(
 
-    or_(
-        models.GovernmentService.state == user.state,
-        models.GovernmentService.state == "All"
-    ),
+        or_(
+            models.GovernmentService.state == user.state,
+            models.GovernmentService.state == "All"
+        ),
 
-    or_(
-        models.GovernmentService.occupation == user.occupation,
-        models.GovernmentService.occupation == "Any"
-    ),
+        or_(
+            models.GovernmentService.occupation == user.occupation,
+            models.GovernmentService.occupation == "Any"
+        ),
 
-    models.GovernmentService.income_limit >= user.annual_income,
+        models.GovernmentService.income_limit >= user.annual_income,
 
-    models.GovernmentService.age_min <= age,
+        models.GovernmentService.age_min <= age,
 
-    models.GovernmentService.age_max >= age
+        models.GovernmentService.age_max >= age
 
     ).all()
-    
-    print("ELIGIBLE SERVICES:")
+
+    print("SERVICES SENT TO AI:")
+
     for service in services:
-     print(service.service_name)
-    # Prepare user profile for Gemini
+        print(service.service_name)
+
+    # Prepare citizen profile
     user_profile = {
         "age": age,
         "gender": user.gender,
         "occupation": user.occupation,
         "annual_income": float(user.annual_income),
         "category": user.category,
-        "state": user.state
+        "state": user.state,
+        "district": user.district
     }
 
-    # Prepare matching services
+    # Prepare service information
     service_data = []
 
     for service in services:
         service_data.append({
             "service_name": service.service_name,
+            "service_type": service.service_type,
             "department": service.department,
             "description": service.description,
             "eligibility": service.eligibility,
@@ -295,7 +305,7 @@ def recommend_services(
             "application_link": service.application_link
         })
 
-    # Generate AI recommendation
+    # Call Gemini
     ai_response = generate_recommendation(
         user_profile,
         service_data,
@@ -303,13 +313,10 @@ def recommend_services(
     )
 
     return {
-        "user_state": user.state,
-        "user_occupation": user.occupation,
-        "user_income": float(user.annual_income),
-        "user_category": user.category,
-        "user_age": age,
-        "count": len(services),
-        "services": service_data,
-        "ai_recommendation": ai_response
+        "status": "success",
+        "user_id": user.user_id,
+        "query": data.query,
+        "count": len(service_data),
+        "recommendations": ai_response
     }
 

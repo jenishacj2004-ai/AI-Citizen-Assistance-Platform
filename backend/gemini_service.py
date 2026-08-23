@@ -1,170 +1,198 @@
 import os
 import json
-import re
+
 from dotenv import load_dotenv
 from google import genai
 
+# Load variables from .env
 load_dotenv()
 
-api_key = os.getenv("GEMINI_API_KEY")
 
-client = genai.Client(api_key=api_key)
+def generate_recommendation(user_profile, service_data, requirement):
+    """
+    Generate personalized government service recommendations
+    using Gemini AI.
 
+    Parameters:
+        user_profile: Citizen profile information.
+        service_data: Government services available to the citizen.
+        requirement: Natural-language citizen requirement.
 
-def normalize_text(text):
-    text = text.lower()
-    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    Returns:
+        A list of recommendation dictionaries.
+    """
 
-    words = text.split()
+    # -----------------------------------------
+    # 1. Get Gemini API key
+    # -----------------------------------------
+    api_key = os.getenv("GEMINI_API_KEY")
 
-    stop_words = {
-        "i", "need", "want", "a", "an", "the",
-        "for", "to", "my", "me", "please",
-        "can", "get", "give", "help", "with"
-    }
-
-    words = [word for word in words if word not in stop_words]
-
-    return " ".join(words)
-
-
-def generate_recommendation(user_profile, services, query):
-
-    normalized_query = normalize_text(query)
-
-    # --------------------------------------------------
-    # 1. Direct service-name matching
-    # --------------------------------------------------
-
-    direct_matches = []
-
-    for service in services:
-
-        service_name = normalize_text(
-            service["service_name"]
+    if not api_key:
+        raise Exception(
+            "GEMINI_API_KEY is not configured. "
+            "Check your .env file."
         )
 
-        if service_name in normalized_query:
+    print("Gemini API key found.")
 
-            direct_matches.append(service)
+    # -----------------------------------------
+    # 2. Create Gemini client
+    # -----------------------------------------
+    try:
+        client = genai.Client(api_key=api_key)
+    except Exception as e:
+        raise Exception(
+            f"Failed to create Gemini client: {str(e)}"
+        )
 
-    # --------------------------------------------------
-    # 2. Keyword matching
-    # --------------------------------------------------
-
-    if not direct_matches:
-
-        query_words = set(normalized_query.split())
-
-        for service in services:
-
-            service_name = normalize_text(
-                service["service_name"]
-            )
-
-            service_words = set(service_name.split())
-
-            common_words = query_words.intersection(
-                service_words
-            )
-
-            if len(common_words) >= 1:
-
-                direct_matches.append(service)
-
-    # --------------------------------------------------
-    # 3. If direct match found, return it
-    # --------------------------------------------------
-
-    if direct_matches:
-
-        recommendations = []
-
-        for service in direct_matches:
-
-            recommendations.append({
-                "service_name": service["service_name"],
-                "why_recommended":
-                    f"This service directly matches your requirement for {service['service_name']}.",
-                "benefits":
-                    service["description"],
-                "required_documents":
-                    service["required_documents"].split(","),
-                "how_to_apply":
-                    "Apply through the official government portal.",
-                "application_link":
-                    service["application_link"]
-            })
-
-        return {
-            "status": "success",
-            "recommendations": recommendations
-        }
-
-    # --------------------------------------------------
-    # 4. No direct match → use Gemini
-    # --------------------------------------------------
-
-    prompt = f"""
-You are an AI government service recommendation assistant.
-
-The backend has already checked the citizen's eligibility.
-
-Your ONLY task is to identify which of the eligible services
-are relevant to the citizen's requirement.
-
-CITIZEN REQUIREMENT:
-{query}
-
-ELIGIBLE SERVICES:
-{services}
-
-RULES:
-
-1. Recommend ONLY services from the provided list.
-2. Never invent a service.
-3. Do not recommend unrelated services.
-4. Consider the meaning of the user's requirement.
-5. Return only genuinely relevant services.
-6. If none are relevant, return an empty recommendations list.
-7. Return ONLY valid JSON.
-
-Return exactly:
-
-{{
-    "status": "success",
-    "recommendations": [
-        {{
-            "service_name": "Service name",
-            "why_recommended": "One short sentence",
-            "benefits": "One short sentence",
-            "required_documents": ["Document 1", "Document 2"],
-            "how_to_apply": "One short sentence",
-            "application_link": "Link"
-        }}
-    ]
-}}
-
-If nothing is relevant:
-
-{{
-    "status": "no_match",
-    "recommendations": []
-}}
-"""
-
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
+    # -----------------------------------------
+    # 3. Prepare service information
+    # -----------------------------------------
+    services_text = json.dumps(
+        service_data,
+        indent=2,
+        default=str
     )
 
-    try:
+    profile_text = json.dumps(
+        user_profile,
+        indent=2,
+        default=str
+    )
 
-        return json.loads(response.text)
+    # -----------------------------------------
+    # 4. Create prompt
+    # -----------------------------------------
+    prompt = f"""
+You are an AI assistant for an e-governance
+government service recommendation platform.
+
+Your task is to recommend the most relevant
+government service for the citizen's requirement.
+
+IMPORTANT RULES:
+
+1. Recommend ONLY services from the provided
+   government service list.
+
+2. Never invent a government service.
+
+3. Understand the meaning of the citizen's
+   requirement, not just exact keywords.
+
+4. Use the citizen profile as supporting context.
+
+5. Recommend the most relevant service or services.
+
+6. Explain briefly why each recommendation is relevant.
+
+7. Include available required documents and
+   application information.
+
+8. This is NOT a general-purpose chatbot.
+   The task is specifically government service
+   recommendation.
+
+CITIZEN PROFILE:
+{profile_text}
+
+CITIZEN REQUIREMENT:
+{requirement}
+
+AVAILABLE GOVERNMENT SERVICES:
+{services_text}
+
+Return ONLY a JSON array.
+
+Required JSON format:
+
+[
+  {{
+    "service_name": "Exact service name from the list",
+    "reason": "Why this service is relevant",
+    "benefits": "Main benefits",
+    "required_documents": "Required documents",
+    "application_procedure": "Application procedure",
+    "application_link": "Official application link"
+  }}
+]
+"""
+
+    print("Sending request to Gemini...")
+    print("Citizen requirement:", requirement)
+
+    # -----------------------------------------
+    # 5. Call Gemini
+    # -----------------------------------------
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt
+        )
+    except Exception as e:
+        print("Gemini API ERROR:")
+        print(repr(e))
+
+        raise Exception(
+            f"Gemini API request failed: {str(e)}"
+        )
+
+    # -----------------------------------------
+    # 6. Check response
+    # -----------------------------------------
+    if response is None:
+        raise Exception(
+            "Gemini returned no response."
+        )
+
+    text = getattr(response, "text", None)
+
+    if not text:
+        print("Gemini response object:")
+        print(response)
+
+        raise Exception(
+            "Gemini returned an empty response."
+        )
+
+    text = text.strip()
+
+    print("Gemini raw response:")
+    print(text)
+
+    # -----------------------------------------
+    # 7. Remove markdown fences
+    # -----------------------------------------
+    if text.startswith("```"):
+        text = text.replace("```json", "")
+        text = text.replace("```JSON", "")
+        text = text.replace("```", "")
+        text = text.strip()
+
+    # -----------------------------------------
+    # 8. Parse JSON
+    # -----------------------------------------
+    try:
+        result = json.loads(text)
+
+        if not isinstance(result, list):
+            result = [result]
+
+        return result
 
     except json.JSONDecodeError:
+        print("Gemini did not return valid JSON.")
+        print("Raw response:")
+        print(text)
 
-        return {
-            "status": "no_match",
-            "recommendations": []
-        }
+        # Return readable fallback instead of crashing
+        return [
+            {
+                "service_name": "AI Recommendation",
+                "reason": text,
+                "benefits": "",
+                "required_documents": "",
+                "application_procedure": "",
+                "application_link": ""
+            }
+        ]

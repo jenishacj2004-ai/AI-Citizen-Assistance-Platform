@@ -50,13 +50,13 @@ function Dashboard() {
             <SidebarItem
               icon="✓"
               label="Eligible Services"
-              onClick={() => navigate("/recommend")}
+              onClick={() => navigate("/eligibility")}
             />
 
             <SidebarItem
               icon="✦"
               label="AI Recommendations"
-              onClick={() => navigate("/recommend")}
+              onClick={() => navigate("/recommendation")}
             />
 
             <SidebarItem
@@ -102,7 +102,7 @@ function Dashboard() {
         {/* Quick Action */}
         <div className="border-t border-white/10 p-4">
           <button
-            onClick={() => navigate("/recommend")}
+            onClick={() => navigate("/recommendation")}
             className="w-full rounded-xl bg-indigo-500 px-4 py-3 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-indigo-400 hover:shadow-lg hover:shadow-indigo-500/20"
           >
             + Quick Action
@@ -300,7 +300,7 @@ function Dashboard() {
                 text="Review government services that match your current profile."
                 action="Check Eligibility →"
                 color="amber"
-                onClick={() => navigate("/recommend")}
+                onClick={() => navigate("/eligibility")}
               />
 
               <SuggestionCard
@@ -446,7 +446,7 @@ function Dashboard() {
                 icon="✓"
                 title="Check Eligibility"
                 text="Find services you qualify for."
-                onClick={() => navigate("/recommend")}
+                onClick={() => navigate("/eligibility")}
               />
 
               <QuickCard

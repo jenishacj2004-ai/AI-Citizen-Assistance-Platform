@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import AIRecommendation from "./pages/AIRecommendation";
 import Landing from "./pages/Landing";
+import Eligibility from "./pages/Eligibility";
 
 
 function App() {
@@ -16,7 +17,9 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/profile" element={<Profile />} />
-      <Route path="/recommend" element={<AIRecommendation />} />
+      <Route path="/recommendation" element={<AIRecommendation />}
+/>
+      <Route path="/eligibility" element={<Eligibility />} />
     </Routes>
   );
 }

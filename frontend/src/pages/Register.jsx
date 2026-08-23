@@ -132,10 +132,10 @@ function Register() {
           </div>
 
           {/* Glass Card */}
-          <div className="group relative overflow-hidden rounded-xl border border-teal-400/20 bg-[rgba(30,41,59,0.7)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl sm:p-8">
+          <div className="group relative overflow-hidden rounded-xl border border-teal-400/20 bg-[rgba(30,41,59,0.7)] p-6 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl sm:p-8 ">
 
             {/* Hover accent line */}
-            <div className="absolute left-0 top-0 h-[2px] w-full bg-gradient-to-r from-transparent via-[#2dd4bf] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <div className="absolute left-0 top-0 h-[2px] w-full bg-gradient-to-r from-transparent via-[#2dd43e] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
             <div className="mb-8">
 
@@ -155,7 +155,7 @@ function Register() {
               {/* Personal Information */}
               <div className="mb-8">
 
-                <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.15em] text-[#2dd4bf]">
+                <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.15em] text-[#ceede8]">
                   Personal Information
                 </h2>
 
