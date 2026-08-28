@@ -320,3 +320,35 @@ def recommend_services(
         "recommendations": ai_response
     }
 
+@app.get("/government-services")
+def get_government_services(
+    db: Session = Depends(get_db)
+):
+    services = db.query(
+        models.GovernmentService
+    ).all()
+
+    service_data = []
+
+    for service in services:
+        service_data.append({
+            "service_id": service.service_id,
+            "service_name": service.service_name,
+            "department": service.department,
+            "description": service.description,
+            "eligibility": service.eligibility,
+            "required_documents": service.required_documents,
+            "application_link": service.application_link,
+            "service_type": service.service_type,
+            "age_min": service.age_min,
+            "age_max": service.age_max,
+            "income_limit": float(service.income_limit),
+            "occupation": service.occupation,
+            "state": service.state,
+            "category": service.category
+        })
+
+    return {
+        "count": len(service_data),
+        "services": service_data
+    }
