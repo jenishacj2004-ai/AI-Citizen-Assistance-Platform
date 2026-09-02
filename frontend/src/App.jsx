@@ -7,7 +7,9 @@ import Profile from "./pages/Profile";
 import AIRecommendation from "./pages/AIRecommendation";
 import Landing from "./pages/Landing";
 import Eligibility from "./pages/Eligibility";
-
+import GovernmentServices from "./pages/GovernmentServices";
+import ServiceDetails from "./pages/ServiceDetails";
+import DocumentVerification from "./pages/DocumentVerification";
 
 function App() {
   return (
@@ -17,9 +19,11 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/profile" element={<Profile />} />
-      <Route path="/recommendation" element={<AIRecommendation />}
-/>
+      <Route path="/recommendation" element={<AIRecommendation />}  />
       <Route path="/eligibility" element={<Eligibility />} />
+      <Route path="/services" element={<GovernmentServices />} />
+      <Route path="/services/:serviceId" element={<ServiceDetails />} />
+      <Route path="/documents" element={<DocumentVerification />} />
     </Routes>
   );
 }

@@ -35,3 +35,14 @@ class UserUpdate(BaseModel):
 class RecommendationRequest(BaseModel):
     user_id: int
     query: str
+
+class DocumentResponse(BaseModel):
+    document_id: int
+    user_id: int
+    service_id: int
+    document_name: str
+    file_path: str
+    verification_status: str
+
+    class Config:
+        from_attributes = True    

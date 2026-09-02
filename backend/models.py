@@ -5,11 +5,16 @@ from sqlalchemy import (
     Text,
     Date,
     Numeric,
-    TIMESTAMP
+    TIMESTAMP,
+    ForeignKey,
+    DateTime
 )
+
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
+from datetime import datetime
+
 from database import Base
-from sqlalchemy.sql import or_
 
 
 class User(Base):
@@ -72,3 +77,22 @@ class GovernmentService(Base):
     state = Column(String(100))
 
     created_at = Column(TIMESTAMP, server_default=func.now())    
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    document_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    service_id = Column(
+        Integer,
+        ForeignKey("government_services.service_id"),
+        nullable=False
+    )
+
+    document_name = Column(String(255), nullable=False)
+    file_path = Column(String(500), nullable=False)
+    verification_status = Column(String(50), default="Pending")
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User")
+    service = relationship("GovernmentService")    

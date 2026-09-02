@@ -59,11 +59,9 @@ function Dashboard() {
               onClick={() => navigate("/recommendation")}
             />
 
-            <SidebarItem
-              icon="▧"
-              label="Documents"
-              onClick={() => {}}
-            />
+          <SidebarItem icon="▧" 
+          label="Documents" 
+          onClick={() => navigate("/documents")} />
 
             <SidebarItem
               icon="◉"
