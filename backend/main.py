@@ -12,6 +12,7 @@ from passlib.context import CryptContext
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+
 from datetime import date, datetime
 from sqlalchemy import or_
 
@@ -21,15 +22,18 @@ import models
 import schemas
 import os
 import shutil
+import uuid
 from pathlib import Path
 
 from database import engine, get_db, SessionLocal
+from ocr_service import extract_document_data
+from verification_service import verify_document
+from fastapi import UploadFile, File, Form
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
     deprecated="auto"
 )
-
 # Create all database tables
 models.Base.metadata.create_all(bind=engine)
 
@@ -421,86 +425,204 @@ def get_government_service(
     }
 
 @app.post("/documents/upload")
-async def upload_document(
+def upload_document(
     user_id: int = Form(...),
     service_id: int = Form(...),
     document_name: str = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
 ):
-    db = SessionLocal()
+
+    # Create unique filename
+    unique_filename = (
+        f"{user_id}_{uuid.uuid4().hex}_{file.filename}"
+    )
+
+    file_path = UPLOAD_DIR / unique_filename
+
+    # Check user
+    user = db.query(models.User).filter(
+        models.User.user_id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    # Continue with your existing code...
+    # Check service
+    service = db.query(models.GovernmentService).filter(
+        models.GovernmentService.service_id == service_id
+    ).first()
+
+    if not service:
+        raise HTTPException(
+            status_code=404,
+            detail="Government service not found"
+        )
+
+    # Create temporary file path
+    file_path = UPLOAD_DIR / file.filename
 
     try:
-        # Check user
-        user = db.query(models.User).filter(
-            models.User.user_id == user_id
-        ).first()
 
-        if not user:
-            raise HTTPException(
-                status_code=404,
-                detail="User not found"
-            )
-
-        # Check service
-        service = db.query(models.GovernmentService).filter(
-            models.GovernmentService.service_id == service_id
-        ).first()
-
-        if not service:
-            raise HTTPException(
-                status_code=404,
-                detail="Government service not found"
-            )
-
-        # Allowed file types
-        allowed_extensions = {
-            ".pdf",
-            ".jpg",
-            ".jpeg",
-            ".png"
-        }
-
-        extension = Path(file.filename).suffix.lower()
-
-        if extension not in allowed_extensions:
-            raise HTTPException(
-                status_code=400,
-                detail="Only PDF, JPG, JPEG and PNG files are allowed"
-            )
-
-        # Generate unique file name
-        filename = f"{user_id}_{service_id}_{document_name}{extension}"
-
-        file_path = UPLOAD_DIR / filename
-
-        # Save file
+        # Save uploaded file temporarily
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
 
-        # Save database record
-        new_document = models.Document(
+        # Set OCR status
+        document = models.Document(
             user_id=user_id,
             service_id=service_id,
             document_name=document_name,
             file_path=str(file_path),
+            ocr_status="Processing",
             verification_status="Pending"
         )
 
-        db.add(new_document)
+        db.add(document)
         db.commit()
-        db.refresh(new_document)
+        db.refresh(document)
+
+        # -------------------------
+        # OCR PROCESSING
+        # -------------------------
+
+        ocr_result = extract_document_data(
+            str(file_path)
+        )
+
+        if not ocr_result["success"]:
+
+            document.ocr_status = "Failed"
+            document.verification_status = "Rejected"
+            document.verification_reason = (
+                "OCR processing failed: "
+                + ocr_result["error"]
+            )
+
+            db.commit()
+
+            return {
+                "success": False,
+                "document_id": document.document_id,
+                "ocr_status": "Failed",
+                "verification_status": "Rejected",
+                "message": "OCR processing failed",
+                "error": ocr_result["error"]
+            }
+
+        # -------------------------
+        # SAVE OCR DATA
+        # -------------------------
+
+        document.extracted_text = (
+            ocr_result["extracted_text"]
+        )
+
+        document.extracted_name = (
+            ocr_result["extracted_name"]
+        )
+
+        document.extracted_dob = (
+            ocr_result["extracted_dob"]
+        )
+
+        document.extracted_address = (
+            ocr_result["extracted_address"]
+        )
+
+        document.ocr_status = "Completed"
+
+        # -------------------------
+        # DOCUMENT VERIFICATION
+        # -------------------------
+
+        verification_result = verify_document(
+        user=user,
+        extracted_name=ocr_result["extracted_name"],
+        extracted_dob=ocr_result["extracted_dob"],
+        extracted_address=ocr_result["extracted_address"]
+        )
+
+        document.verification_status = (
+        verification_result["status"]
+        )
+
+        document.verification_reason = (
+        verification_result["reason"]
+        )
+
+        db.commit()
+        db.refresh(document)
+
+        # -------------------------
+        # TEMPORARY FILE DELETION
+        # -------------------------
+
+        try:
+            os.remove(file_path)
+
+            # File is no longer permanently stored
+            file_path = Column(
+                String(500), 
+                nullable=True
+            )
+
+            db.commit()
+
+        except Exception:
+            pass
 
         return {
-            "status": "success",
-            "message": "Document uploaded successfully",
-            "document_id": new_document.document_id,
-            "document_name": new_document.document_name,
-            "verification_status": new_document.verification_status
-        }
+            "success": True,
 
-    finally:
-        db.close()
+            "document_id": document.document_id,
 
+            "document_name": document.document_name,
+
+            "ocr_status": document.ocr_status,
+
+            "extracted_text": document.extracted_text,
+
+            "extracted_name": document.extracted_name,
+
+            "extracted_dob": document.extracted_dob,
+
+            "extracted_address": document.extracted_address,
+
+            "verification_status": (
+            document.verification_status
+             ),
+
+            "verification_reason": (
+            document.verification_reason
+            ),
+
+             "message": (
+            "Document uploaded, OCR completed, "
+             "and verification completed."
+            )
+         }
+
+    except Exception as e:
+
+        db.rollback()
+
+        # Remove temporary file if it exists
+        if file_path.exists():
+
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Document processing failed: {str(e)}"
+        )
 
 @app.get("/documents/{user_id}")
 def get_user_documents(user_id: int):
@@ -519,16 +641,39 @@ def get_user_documents(user_id: int):
                 == document.service_id
             ).first()
 
-            result.append({
-                "document_id": document.document_id,
-                "user_id": document.user_id,
-                "service_id": document.service_id,
-                "service_name": service.service_name if service else "",
-                "document_name": document.document_name,
-                "file_path": document.file_path,
-                "verification_status": document.verification_status,
-                "uploaded_at": document.uploaded_at
-            })
+        result.append({
+            "document_id": document.document_id,
+            "user_id": document.user_id,
+            "service_id": document.service_id,
+
+            "service_name": (
+            service.service_name
+            if service
+            else ""
+            ),
+
+        "document_name": document.document_name,
+
+        "ocr_status": document.ocr_status,
+
+        "extracted_text": document.extracted_text,
+
+        "extracted_name": document.extracted_name,
+
+        "extracted_dob": document.extracted_dob,
+
+        "extracted_address": document.extracted_address,
+
+        "verification_status": (
+            document.verification_status
+         ),
+
+        "verification_reason": (
+            document.verification_reason
+        ),
+
+        "uploaded_at": document.uploaded_at
+    })
 
         return {
             "status": "success",
@@ -540,7 +685,7 @@ def get_user_documents(user_id: int):
         db.close()        
 
 @app.put("/documents/{document_id}/verify")
-def verify_document(
+def manually_verify_document(
     document_id: int,
     verification_status: str
 ):
@@ -583,3 +728,247 @@ def verify_document(
 
     finally:
         db.close()        
+@app.put("/documents/{document_id}/replace")
+def replace_document(
+    document_id: int,
+    user_id: int = Form(...),
+    document_name: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+
+    # -------------------------
+    # FIND DOCUMENT
+    # -------------------------
+
+    document = db.query(models.Document).filter(
+        models.Document.document_id == document_id
+    ).first()
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found"
+        )
+
+    # -------------------------
+    # CHECK OWNERSHIP
+    # -------------------------
+
+    if document.user_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to replace this document"
+        )
+
+    # -------------------------
+    # CHECK USER
+    # -------------------------
+
+    user = db.query(models.User).filter(
+        models.User.user_id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    # -------------------------
+    # TEMPORARY FILE
+    # -------------------------
+
+    file_path = UPLOAD_DIR / file.filename
+
+    try:
+
+        # Save new file temporarily
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        # -------------------------
+        # RESET DOCUMENT
+        # -------------------------
+
+        document.document_name = document_name
+        document.file_path = str(file_path)
+
+        document.ocr_status = "Processing"
+        document.verification_status = "Pending"
+        document.verification_reason = None
+
+        document.extracted_text = None
+        document.extracted_name = None
+        document.extracted_dob = None
+        document.extracted_address = None
+
+        db.commit()
+        db.refresh(document)
+
+        # -------------------------
+        # OCR
+        # -------------------------
+
+        ocr_result = extract_document_data(
+            str(file_path)
+        )
+
+        if not ocr_result["success"]:
+
+            document.ocr_status = "Failed"
+            document.verification_status = "Rejected"
+
+            document.verification_reason = (
+                "OCR processing failed: "
+                + ocr_result["error"]
+            )
+
+            db.commit()
+            db.refresh(document)
+
+            return {
+                "success": False,
+                "document_id": document.document_id,
+                "ocr_status": "Failed",
+                "verification_status": "Rejected",
+                "verification_reason": document.verification_reason
+            }
+
+        # -------------------------
+        # SAVE OCR DATA
+        # -------------------------
+
+        document.extracted_text = (
+            ocr_result["extracted_text"]
+        )
+
+        document.extracted_name = (
+            ocr_result["extracted_name"]
+        )
+
+        document.extracted_dob = (
+            ocr_result["extracted_dob"]
+        )
+
+        document.extracted_address = (
+            ocr_result["extracted_address"]
+        )
+
+        document.ocr_status = "Completed"
+
+        # -------------------------
+        # VERIFY
+        # -------------------------
+
+        verification_result = verify_document(
+            user=user,
+            extracted_name=ocr_result["extracted_name"],
+            extracted_dob=ocr_result["extracted_dob"],
+            extracted_address=ocr_result["extracted_address"]
+        )
+
+        document.verification_status = (
+            verification_result["status"]
+        )
+
+        document.verification_reason = (
+            verification_result["reason"]
+        )
+
+        db.commit()
+        db.refresh(document)
+
+        # -------------------------
+        # DELETE TEMPORARY FILE
+        # -------------------------
+
+
+        # -------------------------
+        # RESPONSE
+        # -------------------------
+
+        return {
+            "success": True,
+            "message": "Document replaced and verified successfully",
+
+            "document_id": document.document_id,
+            "document_name": document.document_name,
+
+            "ocr_status": document.ocr_status,
+
+            "extracted_name": document.extracted_name,
+            "extracted_dob": document.extracted_dob,
+            "extracted_address": document.extracted_address,
+
+            "verification_status": (
+                document.verification_status
+            ),
+
+            "verification_reason": (
+                document.verification_reason
+            )
+        }
+
+    except Exception as e:
+
+        db.rollback()
+
+        if file_path.exists():
+
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Document replacement failed: {str(e)}"
+        )
+@app.delete("/documents/{document_id}")
+def delete_document(
+    document_id: int,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+
+    # Find document
+    document = db.query(models.Document).filter(
+        models.Document.document_id == document_id
+    ).first()
+
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="Document not found"
+        )
+
+    # Check ownership
+    if document.user_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to delete this document"
+        )
+
+    # Delete physical file if it still exists
+    if document.file_path:
+
+        file_path = Path(document.file_path)
+
+        if file_path.exists():
+
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+
+    # Delete database record
+    db.delete(document)
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "Document deleted successfully",
+        "document_id": document_id
+    }
+

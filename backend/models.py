@@ -81,18 +81,93 @@ class GovernmentService(Base):
 class Document(Base):
     __tablename__ = "documents"
 
-    document_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
+    # Primary Key
+    document_id = Column(
+        Integer,
+        primary_key=True,
+        index=True,
+        autoincrement=True
+    )
+
+    # Related Citizen
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    # Related Government Service
     service_id = Column(
         Integer,
         ForeignKey("government_services.service_id"),
         nullable=False
     )
 
-    document_name = Column(String(255), nullable=False)
-    file_path = Column(String(500), nullable=False)
-    verification_status = Column(String(50), default="Pending")
-    uploaded_at = Column(DateTime, default=datetime.utcnow)
+    # Document Type
+    document_name = Column(
+        String(255),
+        nullable=False
+    )
 
+    # Temporary file path (can become NULL after processing)
+    file_path = Column(
+        String(500),
+        nullable=True
+    )
+
+    # ==============================
+    # OCR INFORMATION
+    # ==============================
+
+    # Complete text extracted by OCR
+    extracted_text = Column(
+        Text,
+        nullable=True
+    )
+
+    # Important information extracted from document
+    extracted_name = Column(
+        String(150),
+        nullable=True
+    )
+
+    extracted_dob = Column(
+        String(50),
+        nullable=True
+    )
+
+    extracted_address = Column(
+        Text,
+        nullable=True
+    )
+
+    # OCR processing result
+    ocr_status = Column(
+        String(50),
+        default="Pending"
+    )
+
+    # ==============================
+    # DOCUMENT VERIFICATION
+    # ==============================
+
+    verification_status = Column(
+        String(50),
+        default="Pending"
+    )
+
+    verification_reason = Column(
+        Text,
+        nullable=True
+    )
+
+    # Record creation time
+    uploaded_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    # Relationships
     user = relationship("User")
-    service = relationship("GovernmentService")    
+
+    service = relationship("GovernmentService")
