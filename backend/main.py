@@ -23,6 +23,8 @@ import schemas
 import os
 import shutil
 import uuid
+import json
+
 from pathlib import Path
 
 from database import engine, get_db, SessionLocal
@@ -261,14 +263,16 @@ def get_eligible_services(
     }
 
 
-
 @app.post("/recommend-services")
 def recommend_services(
     data: schemas.RecommendationRequest,
     db: Session = Depends(get_db)
 ):
-    # Fetch logged-in user
-    user = db.query(models.User).filter(
+
+    # Find user
+    user = db.query(
+        models.User
+    ).filter(
         models.User.user_id == data.user_id
     ).first()
 
@@ -283,78 +287,63 @@ def recommend_services(
 
     age = today.year - user.dob.year
 
-    if (today.month, today.day) < (user.dob.month, user.dob.day):
+    if (
+        today.month,
+        today.day
+    ) < (
+        user.dob.month,
+        user.dob.day
+    ):
         age -= 1
 
-    # Get services applicable to the user's profile.
-    # No service type is selected by the citizen.
-    services = db.query(
-        models.GovernmentService
-    ).filter(
-
-        or_(
-            models.GovernmentService.state == user.state,
-            models.GovernmentService.state == "All"
-        ),
-
-        or_(
-            models.GovernmentService.occupation == user.occupation,
-            models.GovernmentService.occupation == "Any"
-        ),
-
-        models.GovernmentService.income_limit >= user.annual_income,
-
-        models.GovernmentService.age_min <= age,
-
-        models.GovernmentService.age_max >= age
-
-    ).all()
-
-    print("SERVICES SENT TO AI:")
-
-    for service in services:
-        print(service.service_name)
-
-    # Prepare citizen profile
+    # Citizen profile
     user_profile = {
+
         "age": age,
+
         "gender": user.gender,
+
         "occupation": user.occupation,
-        "annual_income": float(user.annual_income),
+
+        "annual_income":
+            float(user.annual_income),
+
         "category": user.category,
+
         "state": user.state,
+
         "district": user.district
     }
 
-    # Prepare service information
-    service_data = []
+    # Send profile + query directly to Gemini
+    try:
 
-    for service in services:
-        service_data.append({
-            "service_name": service.service_name,
-            "service_type": service.service_type,
-            "department": service.department,
-            "description": service.description,
-            "eligibility": service.eligibility,
-            "required_documents": service.required_documents,
-            "application_link": service.application_link
-        })
+        ai_response = generate_recommendation(
+            user_profile,
+            data.query
+        )
 
-    # Call Gemini
-    ai_response = generate_recommendation(
-        user_profile,
-        service_data,
-        data.query
-    )
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI recommendation failed: {str(e)}"
+        )
 
     return {
+
         "status": "success",
+
         "user_id": user.user_id,
+
         "query": data.query,
-        "count": len(service_data),
+
+        "source": "Gemini AI",
+
+        "count": len(ai_response),
+
         "recommendations": ai_response
     }
-
 @app.get("/government-services")
 def get_government_services(
     db: Session = Depends(get_db)
