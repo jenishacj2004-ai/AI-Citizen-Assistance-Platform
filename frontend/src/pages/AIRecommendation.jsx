@@ -4,21 +4,30 @@ import { Link, useNavigate } from "react-router-dom";
 function AIRecommendation() {
   const navigate = useNavigate();
 
+  // =========================================================
+  // STATE
+  // =========================================================
+
   const [profile, setProfile] = useState(null);
   const [requirement, setRequirement] = useState("");
   const [recommendations, setRecommendations] = useState([]);
 
   const [loadingProfile, setLoadingProfile] = useState(true);
-  const [loadingRecommendation, setLoadingRecommendation] = useState(false);
+  const [loadingRecommendation, setLoadingRecommendation] =
+    useState(false);
 
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  // =========================================================
+  // LOCAL STORAGE
+  // =========================================================
 
   const userId = localStorage.getItem("user_id");
   const userName = localStorage.getItem("user_name") || "Citizen";
 
   // =========================================================
-  // LOAD USER PROFILE
+  // LOAD PROFILE
   // =========================================================
 
   useEffect(() => {
@@ -47,8 +56,12 @@ function AIRecommendation() {
         );
       }
 
+      console.log("Profile:", data);
+
       setProfile(data);
     } catch (err) {
+      console.error("Profile Error:", err);
+
       setError(
         err.message || "Unable to load your profile."
       );
@@ -93,6 +106,8 @@ function AIRecommendation() {
 
       const data = await response.json();
 
+      console.log("AI Recommendation Response:", data);
+
       if (!response.ok) {
         throw new Error(
           data.detail ||
@@ -100,9 +115,9 @@ function AIRecommendation() {
         );
       }
 
-      // -------------------------------------------------------
-      // HANDLE DIFFERENT BACKEND RESPONSE STRUCTURES
-      // -------------------------------------------------------
+      // =====================================================
+      // HANDLE BACKEND RESPONSE
+      // =====================================================
 
       let result = [];
 
@@ -112,11 +127,17 @@ function AIRecommendation() {
         result = data.recommendations;
       } else if (Array.isArray(data.data)) {
         result = data.data;
+      } else if (data.recommendation) {
+        result = [data.recommendation];
       }
+
+      console.log("Final Recommendations:", result);
 
       setRecommendations(result);
       setSubmitted(true);
     } catch (err) {
+      console.error("AI Recommendation Error:", err);
+
       setError(
         err.message ||
           "Unable to generate AI recommendation."
@@ -137,7 +158,14 @@ function AIRecommendation() {
           SIDEBAR
       ===================================================== */}
 
-      <aside className="fixed left-0 top-0 z-30 hidden h-screen w-64 border-r border-white/10 bg-[#0b101b] lg:flex lg:flex-col">
+      <aside
+        className="
+          fixed left-0 top-0 z-30 hidden h-screen w-64
+          border-r border-white/10
+          bg-[#0b101b]
+          lg:flex lg:flex-col
+        "
+      >
 
         {/* Logo */}
 
@@ -153,7 +181,15 @@ function AIRecommendation() {
             </span>
           </Link>
 
-          <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-500">
+          <p
+            className="
+              mt-1
+              text-[10px]
+              uppercase
+              tracking-[0.18em]
+              text-slate-500
+            "
+          >
             Digital Citizenship
           </p>
 
@@ -163,7 +199,17 @@ function AIRecommendation() {
 
         <div className="flex-1 px-4 py-6">
 
-          <p className="px-3 pb-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <p
+            className="
+              px-3
+              pb-3
+              text-[10px]
+              font-semibold
+              uppercase
+              tracking-[0.18em]
+              text-slate-500
+            "
+          >
             Main Menu
           </p>
 
@@ -216,7 +262,20 @@ function AIRecommendation() {
 
           </div>
 
-          <p className="px-3 pb-3 pt-8 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+          {/* Account */}
+
+          <p
+            className="
+              px-3
+              pb-3
+              pt-8
+              text-[10px]
+              font-semibold
+              uppercase
+              tracking-[0.18em]
+              text-slate-500
+            "
+          >
             Account
           </p>
 
@@ -258,7 +317,20 @@ function AIRecommendation() {
             onClick={() =>
               navigate("/eligibility")
             }
-            className="w-full rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition duration-300 hover:bg-emerald-400/15"
+            className="
+              w-full
+              rounded-xl
+              border border-emerald-400/20
+              bg-emerald-400/10
+              px-4
+              py-3
+              text-sm
+              font-semibold
+              text-emerald-300
+              transition
+              duration-300
+              hover:bg-emerald-400/15
+            "
           >
             Check Eligibility
           </button>
@@ -277,17 +349,50 @@ function AIRecommendation() {
             TOP BAR
         =================================================== */}
 
-        <header className="sticky top-0 z-20 border-b border-white/10 bg-[#0d1422]/90 backdrop-blur-xl">
+        <header
+          className="
+            sticky
+            top-0
+            z-20
+            border-b border-white/10
+            bg-[#0d1422]/90
+            backdrop-blur-xl
+          "
+        >
 
-          <div className="flex min-h-20 items-center justify-between px-6 lg:px-8">
+          <div
+            className="
+              flex
+              min-h-20
+              items-center
+              justify-between
+              px-6
+              lg:px-8
+            "
+          >
 
             <div>
 
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-indigo-400">
+              <p
+                className="
+                  text-xs
+                  font-semibold
+                  uppercase
+                  tracking-[0.18em]
+                  text-indigo-400
+                "
+              >
                 AI Assistance
               </p>
 
-              <h1 className="mt-1 text-lg font-semibold text-slate-100">
+              <h1
+                className="
+                  mt-1
+                  text-lg
+                  font-semibold
+                  text-slate-100
+                "
+              >
                 Personalized Government Service Recommendation
               </h1>
 
@@ -295,24 +400,46 @@ function AIRecommendation() {
 
             <div className="flex items-center gap-3">
 
-              <div className="hidden text-right sm:block">
+              <div
+                className="
+                  hidden
+                  text-right
+                  sm:block
+                "
+              >
 
                 <p className="text-sm font-semibold">
                   {userName}
                 </p>
 
-                <p className="text-[11px] text-emerald-400">
+                <p
+                  className="
+                    text-[11px]
+                    text-emerald-400
+                  "
+                >
                   ● Verified
                 </p>
 
               </div>
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 font-bold">
-
+              <div
+                className="
+                  flex
+                  h-10
+                  w-10
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-gradient-to-br
+                  from-indigo-500
+                  to-purple-500
+                  font-bold
+                "
+              >
                 {userName
                   .charAt(0)
                   .toUpperCase()}
-
               </div>
 
             </div>
@@ -327,13 +454,24 @@ function AIRecommendation() {
 
         <main className="px-6 py-8 lg:px-8">
 
-          {/* Introduction */}
+          {/* =================================================
+              INTRODUCTION
+          ================================================= */}
 
           <section className="mb-8">
 
             <div className="flex items-center gap-3">
 
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-2xl text-indigo-300">
+              <div
+                className="
+                  flex h-12 w-12
+                  items-center justify-center
+                  rounded-2xl
+                  bg-indigo-500/10
+                  text-2xl
+                  text-indigo-300
+                "
+              >
                 ✦
               </div>
 
@@ -354,10 +492,20 @@ function AIRecommendation() {
 
           </section>
 
-          {/* Error */}
+          {/* =================================================
+              ERROR
+          ================================================= */}
 
           {error && (
-            <div className="mb-6 rounded-xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm text-red-300">
+            <div
+              className="
+                mb-6 rounded-xl
+                border border-red-400/20
+                bg-red-500/10
+                px-5 py-4
+                text-sm text-red-300
+              "
+            >
               {error}
             </div>
           )}
@@ -372,11 +520,26 @@ function AIRecommendation() {
                 PROFILE SUMMARY
             ================================================= */}
 
-            <section className="rounded-2xl border border-white/10 bg-[#141d2e] p-6">
+            <section
+              className="
+                rounded-2xl
+                border border-white/10
+                bg-[#141d2e]
+                p-6
+              "
+            >
 
               <div className="flex items-center gap-3">
 
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-300">
+                <div
+                  className="
+                    flex h-11 w-11
+                    items-center justify-center
+                    rounded-xl
+                    bg-indigo-500/10
+                    text-indigo-300
+                  "
+                >
                   👤
                 </div>
 
@@ -393,6 +556,8 @@ function AIRecommendation() {
                 </div>
 
               </div>
+
+              {/* Loading */}
 
               {loadingProfile ? (
 
@@ -458,7 +623,13 @@ function AIRecommendation() {
 
                 </div>
 
-              ) : null}
+              ) : (
+
+                <div className="mt-6 rounded-xl bg-white/[0.02] p-4 text-sm text-slate-500">
+                  Profile information unavailable.
+                </div>
+
+              )}
 
             </section>
 
@@ -466,7 +637,16 @@ function AIRecommendation() {
                 AI INPUT
             ================================================= */}
 
-            <section className="rounded-2xl border border-indigo-400/15 bg-[#141d2e] p-6 shadow-xl lg:p-8">
+            <section
+              className="
+                rounded-2xl
+                border border-indigo-400/15
+                bg-[#141d2e]
+                p-6
+                shadow-xl
+                lg:p-8
+              "
+            >
 
               <div>
 
@@ -507,7 +687,21 @@ function AIRecommendation() {
                     setError("");
                   }}
                   placeholder="Example: I need an income certificate for applying for a government scholarship. What documents are required and how can I apply?"
-                  className="w-full resize-none rounded-2xl border border-white/10 bg-[#25334c] px-4 py-4 text-sm leading-6 text-white outline-none transition duration-300 placeholder:text-slate-500 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-400/20"
+                  className="
+                    w-full resize-none
+                    rounded-2xl
+                    border border-white/10
+                    bg-[#25334c]
+                    px-4 py-4
+                    text-sm leading-6
+                    text-white
+                    outline-none
+                    transition duration-300
+                    placeholder:text-slate-500
+                    focus:border-indigo-400
+                    focus:ring-2
+                    focus:ring-indigo-400/20
+                  "
                 />
 
                 <p className="mt-2 text-xs text-slate-600">
@@ -527,7 +721,24 @@ function AIRecommendation() {
                   loadingProfile ||
                   !requirement.trim()
                 }
-                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-500 px-5 py-3.5 text-sm font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:bg-indigo-400 hover:shadow-lg hover:shadow-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                className="
+                  mt-6 flex w-full
+                  items-center justify-center
+                  gap-2
+                  rounded-xl
+                  bg-indigo-500
+                  px-5 py-3.5
+                  text-sm font-semibold
+                  text-white
+                  transition duration-300
+                  hover:-translate-y-0.5
+                  hover:bg-indigo-400
+                  hover:shadow-lg
+                  hover:shadow-indigo-500/20
+                  disabled:cursor-not-allowed
+                  disabled:opacity-50
+                  disabled:hover:translate-y-0
+                "
               >
 
                 <span>
@@ -544,7 +755,14 @@ function AIRecommendation() {
 
               {/* How AI Works */}
 
-              <div className="mt-6 rounded-xl border border-indigo-400/10 bg-indigo-400/5 p-4">
+              <div
+                className="
+                  mt-6 rounded-xl
+                  border border-indigo-400/10
+                  bg-indigo-400/5
+                  p-4
+                "
+              >
 
                 <div className="flex items-start gap-3">
 
@@ -585,7 +803,17 @@ function AIRecommendation() {
 
             <section className="mt-8">
 
-              <div className="mb-5 flex items-center justify-between">
+              {/* Results Header */}
+
+              <div
+                className="
+                  mb-5 flex
+                  flex-col gap-3
+                  sm:flex-row
+                  sm:items-center
+                  sm:justify-between
+                "
+              >
 
                 <div>
 
@@ -597,49 +825,85 @@ function AIRecommendation() {
                     Relevant Government Services
                   </h3>
 
+                  <p className="mt-1 text-sm text-slate-500">
+                    Services identified based on your requirement
+                    and profile.
+                  </p>
+
                 </div>
 
                 {recommendations.length > 0 && (
 
-                  <span className="rounded-full bg-indigo-400/10 px-3 py-1.5 text-xs font-semibold text-indigo-300">
-
+                  <span
+                    className="
+                      w-fit rounded-full
+                      border border-indigo-400/10
+                      bg-indigo-400/10
+                      px-3 py-1.5
+                      text-xs font-semibold
+                      text-indigo-300
+                    "
+                  >
                     {recommendations.length} result
                     {recommendations.length !== 1
                       ? "s"
                       : ""}
-
                   </span>
 
                 )}
 
               </div>
 
-              {/* No results */}
+              {/* No Results */}
 
               {recommendations.length === 0 ? (
 
-                <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-10 text-center">
+                <div
+                  className="
+                    rounded-2xl
+                    border border-dashed
+                    border-white/10
+                    bg-white/[0.02]
+                    p-10
+                    text-center
+                  "
+                >
 
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-400/10 text-xl text-amber-300">
+                  <div
+                    className="
+                      mx-auto flex h-14 w-14
+                      items-center justify-center
+                      rounded-2xl
+                      bg-amber-400/10
+                      text-xl
+                      text-amber-300
+                    "
+                  >
                     ?
                   </div>
 
-                  <h4 className="mt-5 text-lg font-semibold">
+                  <h4 className="mt-5 text-lg font-semibold text-slate-200">
                     No relevant service found
                   </h4>
 
                   <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-slate-500">
                     Try describing your requirement with more
-                    details. For example, mention the certificate,
-                    assistance, scheme or government service you
-                    need.
+                    details. Mention the certificate, assistance,
+                    scheme or government service you need.
                   </p>
 
                 </div>
 
               ) : (
 
-                <div className="grid gap-5 lg:grid-cols-2">
+                <div
+                  className="
+                    grid
+                    gap-5
+                    md:grid-cols-1
+                    xl:grid-cols-2
+                  "
+                >
 
                   {recommendations.map(
                     (item, index) => (
@@ -662,12 +926,20 @@ function AIRecommendation() {
 
         </main>
 
-        {/* Footer */}
+        {/* =================================================
+            FOOTER
+        ================================================= */}
 
-        <footer className="border-t border-white/10 px-6 py-6 text-center text-xs text-slate-600 lg:px-8">
-
+        <footer
+          className="
+            border-t border-white/10
+            px-6 py-6
+            text-center
+            text-xs text-slate-600
+            lg:px-8
+          "
+        >
           AI-Powered Citizen Assistance Platform for E-Governance
-
         </footer>
 
       </div>
@@ -691,13 +963,22 @@ function SidebarItem({
   return (
     <button
       onClick={onClick}
-      className={`group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition duration-300 ${
-        active
-          ? "border-l-2 border-indigo-400 bg-indigo-400/10 text-indigo-300"
-          : danger
-          ? "text-red-400 hover:bg-red-400/10"
-          : "text-slate-400 hover:bg-white/5 hover:text-white"
-      }`}
+      className={`
+        group flex w-full
+        items-center gap-3
+        rounded-lg
+        px-3 py-3
+        text-left text-sm
+        transition duration-300
+
+        ${
+          active
+            ? "border-l-2 border-indigo-400 bg-indigo-400/10 text-indigo-300"
+            : danger
+            ? "text-red-400 hover:bg-red-400/10"
+            : "text-slate-400 hover:bg-white/5 hover:text-white"
+        }
+      `}
     >
 
       <span className="w-5 text-center">
@@ -722,14 +1003,32 @@ function ProfileRow({
   value,
 }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+    <div
+      className="
+        rounded-xl
+        border border-white/5
+        bg-white/[0.02]
+        px-4 py-3
+      "
+    >
 
-      <p className="text-[10px] uppercase tracking-[0.12em] text-slate-600">
+      <p
+        className="
+          text-[10px]
+          uppercase
+          tracking-[0.12em]
+          text-slate-600
+        "
+      >
         {label}
       </p>
 
       <p className="mt-1 text-sm font-medium text-slate-300">
-        {value || "Not provided"}
+        {value !== null &&
+        value !== undefined &&
+        String(value).trim() !== ""
+          ? String(value)
+          : "Not provided"}
       </p>
 
     </div>
@@ -743,18 +1042,24 @@ function ProfileRow({
 
 function ProfileSkeleton() {
   return (
-    <div className="h-12 animate-pulse rounded-xl bg-white/5" />
+    <div
+      className="
+        h-12
+        animate-pulse
+        rounded-xl
+        bg-white/5
+      "
+    />
   );
 }
+//********************************************************************************************************************************************** */
 
 
 // =========================================================
 // RECOMMENDATION CARD
 // =========================================================
 
-function RecommendationCard({
-  recommendation,
-}) {
+function RecommendationCard({ recommendation }) {
 
   const serviceName =
     recommendation.service_name ||
@@ -762,10 +1067,12 @@ function RecommendationCard({
     recommendation.title ||
     "Government Service";
 
+  const department =
+    recommendation.department ||
+    "Government Service";
 
   const description =
     recommendation.description || "";
-
 
   const reason =
     recommendation.reason ||
@@ -773,31 +1080,26 @@ function RecommendationCard({
     recommendation.explanation ||
     "";
 
-
   const eligibilityStatus =
     recommendation.eligibility_status ||
     recommendation.eligibility_assessment ||
     recommendation.status ||
     "";
 
-
   const eligibility =
     recommendation.eligibility ||
     recommendation.eligibility_conditions ||
     [];
-
 
   const benefits =
     recommendation.benefits ||
     recommendation.benefit ||
     "";
 
-
   const documents =
     recommendation.required_documents ||
     recommendation.documents ||
     [];
-
 
   const application =
     recommendation.application_procedure ||
@@ -805,243 +1107,790 @@ function RecommendationCard({
     recommendation.application_guidance ||
     [];
 
-
   const applicationLink =
     recommendation.application_link ||
     recommendation.application_url ||
     recommendation.official_application_link ||
     "";
 
-
   const officialSourceNote =
     recommendation.official_source_note ||
-    "Verify the current information through the official government source.";
+    "Verify the latest information through the official government source.";
 
+  // =========================================================
+  // ELIGIBILITY STYLE
+  // =========================================================
+
+  const getEligibilityStyle = (status) => {
+
+    const value = String(status).toLowerCase();
+
+    if (
+      value.includes("eligible") &&
+      !value.includes("not")
+    ) {
+      return {
+        container: "border-emerald-400/20 bg-emerald-400/10",
+        icon: "✓",
+        iconBg: "bg-emerald-400/15 text-emerald-300",
+        text: "text-emerald-300",
+      };
+    }
+
+    if (value.includes("potential")) {
+      return {
+        container: "border-amber-400/20 bg-amber-400/10",
+        icon: "?",
+        iconBg: "bg-amber-400/15 text-amber-300",
+        text: "text-amber-300",
+      };
+    }
+
+    if (value.includes("not eligible")) {
+      return {
+        container: "border-red-400/20 bg-red-400/10",
+        icon: "!",
+        iconBg: "bg-red-400/15 text-red-300",
+        text: "text-red-300",
+      };
+    }
+
+    return {
+      container: "border-slate-400/15 bg-slate-400/5",
+      icon: "?",
+      iconBg: "bg-slate-400/10 text-slate-300",
+      text: "text-slate-300",
+    };
+  };
+
+  const eligibilityStyle =
+    getEligibilityStyle(eligibilityStatus);
 
   return (
 
-    <div className="group rounded-2xl border border-indigo-400/15 bg-[#141d2e] p-6 transition-all duration-300 hover:-translate-y-1 hover:border-indigo-400/30 hover:shadow-xl hover:shadow-indigo-950/20">
+    <article
+      className="
+        group relative overflow-hidden
+        rounded-3xl
+        border border-white/10
+        bg-[#141d2e]
+        shadow-lg shadow-black/10
+        transition-all duration-300
+        hover:-translate-y-1
+        hover:border-indigo-400/30
+        hover:shadow-2xl
+        hover:shadow-indigo-950/30
+      "
+    >
 
       {/* =================================================
-          CARD HEADER
+          TOP ACCENT
       ================================================= */}
 
-      <div className="flex items-start gap-4">
+      <div className="h-1 w-full bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-400" />
 
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 text-xl text-indigo-300 transition-transform duration-300 group-hover:scale-105">
-          ✦
+      <div className="p-6 sm:p-7">
+
+        {/* =================================================
+            HEADER
+        ================================================= */}
+
+        <div className="flex items-start gap-4">
+
+          <div
+            className="
+              flex h-14 w-14 shrink-0
+              items-center justify-center
+              rounded-2xl
+              bg-indigo-500/10
+              text-2xl
+              text-indigo-300
+              ring-1
+              ring-indigo-400/10
+              transition
+              duration-300
+              group-hover:scale-105
+            "
+          >
+            ✦
+          </div>
+
+          <div className="min-w-0 flex-1">
+
+            <span
+              className="
+                inline-flex
+                rounded-full
+                border
+                border-indigo-400/15
+                bg-indigo-400/10
+                px-2.5
+                py-1
+                text-[10px]
+                font-semibold
+                uppercase
+                tracking-[0.14em]
+                text-indigo-300
+              "
+            >
+              AI Recommended
+            </span>
+
+            <h4
+              className="
+                mt-2
+                text-xl
+                font-bold
+                leading-tight
+                text-slate-100
+                sm:text-2xl
+              "
+            >
+              {serviceName}
+            </h4>
+
+            <p className="mt-1 text-xs font-medium text-indigo-300">
+              {department}
+            </p>
+
+          </div>
+
         </div>
 
-        <div className="flex-1">
 
-          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-400">
-            AI Recommended
-          </span>
+        {/* =================================================
+            DESCRIPTION
+        ================================================= */}
 
-          <h4 className="mt-1 text-xl font-semibold text-slate-100">
-            {serviceName}
-          </h4>
+        {description && (
+
+          <div className="mt-6">
+
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              About This Service
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              {description}
+            </p>
+
+          </div>
+
+        )}
+
+
+        {/* =================================================
+            WHY RELEVANT
+        ================================================= */}
+
+        {reason && (
+
+          <div
+            className="
+              mt-5
+              rounded-2xl
+              border border-indigo-400/10
+              bg-indigo-400/[0.05]
+              p-4
+            "
+          >
+
+            <div className="flex gap-3">
+
+              <div
+                className="
+                  flex h-9 w-9 shrink-0
+                  items-center justify-center
+                  rounded-xl
+                  bg-indigo-400/10
+                  text-indigo-300
+                "
+              >
+                ✦
+              </div>
+
+              <div>
+
+                <p className="text-xs font-semibold text-indigo-300">
+                  Why This Service Matches Your Need
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-slate-400">
+                  {reason}
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
+
+
+        {/* =================================================
+            ELIGIBILITY STATUS
+        ================================================= */}
+
+        {eligibilityStatus && (
+
+          <div
+            className={`
+              mt-5
+              rounded-2xl
+              border
+              ${eligibilityStyle.container}
+              p-4
+            `}
+          >
+
+            <div className="flex items-center gap-3">
+
+              <div
+                className={`
+                  flex h-9 w-9 shrink-0
+                  items-center justify-center
+                  rounded-full
+                  ${eligibilityStyle.iconBg}
+                  font-bold
+                `}
+              >
+                {eligibilityStyle.icon}
+              </div>
+
+              <div>
+
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-slate-500">
+                  Eligibility Assessment
+                  </p>
+
+                <div
+                  className={`
+                      mt-1
+                      text-sm
+                      font-semibold
+                      ${eligibilityStyle.text}
+                    `}
+                  >
+                <SafeContent content={eligibilityStatus} />
+                </div>
+
+                </div>
+
+            </div>
+
+          </div>
+
+        )}
+
+
+        {/* =================================================
+            DROPDOWN SECTIONS
+        ================================================= */}
+
+        <div className="mt-6 space-y-3">
+
+
+          {/* ELIGIBILITY */}
+
+          {hasContent(eligibility) && (
+
+            <RecommendationDropdown
+              icon="✓"
+              title="Eligibility Conditions"
+              description="Check the conditions that may apply"
+              content={eligibility}
+            />
+
+          )}
+
+
+          {/* BENEFITS */}
+
+          {hasContent(benefits) && (
+
+            <RecommendationDropdown
+              icon="★"
+              title="Benefits"
+              description="What this service or scheme provides"
+              content={benefits}
+            />
+
+          )}
+
+
+          {/* DOCUMENTS */}
+
+          {hasContent(documents) && (
+
+            <RecommendationDropdown
+              icon="▧"
+              title="Documents Required"
+              description="Documents you should keep ready"
+              content={documents}
+              numbered
+            />
+
+          )}
+
+
+          {/* HOW TO APPLY */}
+
+          {hasContent(application) && (
+
+            <RecommendationDropdown
+              icon="→"
+              title="How to Apply"
+              description="Step-by-step application guidance"
+              content={application}
+              numbered
+            />
+
+          )}
+
+
+          {/* APPLY LINK */}
+
+          {applicationLink && (
+
+            <a
+              href={applicationLink}
+              target="_blank"
+              rel="noreferrer"
+              className="
+                flex w-full
+                items-center justify-between
+                rounded-2xl
+                border border-indigo-400/20
+                bg-indigo-500/10
+                px-4 py-4
+                transition-all duration-300
+                hover:border-indigo-400/40
+                hover:bg-indigo-500/15
+              "
+            >
+
+              <div className="flex items-center gap-3">
+
+                <div
+                  className="
+                    flex h-9 w-9
+                    items-center justify-center
+                    rounded-xl
+                    bg-indigo-500/15
+                    text-indigo-300
+                  "
+                >
+                  ↗
+                </div>
+
+                <div>
+
+                  <p className="text-sm font-semibold text-indigo-200">
+                    Apply Online
+                  </p>
+
+                  <p className="text-xs text-slate-500">
+                    Open the official application website
+                  </p>
+
+                </div>
+
+              </div>
+
+              <span className="text-indigo-300">
+                →
+              </span>
+
+            </a>
+
+          )}
 
         </div>
+
+
+        {/* =================================================
+            IMPORTANT NOTE
+        ================================================= */}
+
+        {officialSourceNote && (
+
+          <div
+            className="
+              mt-6
+              rounded-2xl
+              border border-amber-400/15
+              bg-amber-400/[0.05]
+              p-4
+            "
+          >
+
+            <div className="flex items-start gap-3">
+
+              <div
+                className="
+                  flex h-8 w-8 shrink-0
+                  items-center justify-center
+                  rounded-lg
+                  bg-amber-400/10
+                  text-sm
+                  text-amber-300
+                "
+              >
+                !
+              </div>
+
+              <div>
+
+                <p className="text-xs font-semibold text-amber-300">
+                  Important
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  {officialSourceNote}
+                </p>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        )}
 
       </div>
 
+    </article>
+  );
+}
+
+  
+// =========================================================
+// RECOMMENDATION DROPDOWN
+// =========================================================
+
+function RecommendationDropdown({
+  icon,
+  title,
+  description,
+  content,
+  numbered = false,
+}) {
+
+  const [open, setOpen] = useState(false);
+
+  return (
+
+    <div
+      className="
+        overflow-hidden
+        rounded-2xl
+        border border-white/10
+        bg-[#0f1727]
+        transition-all duration-300
+        hover:border-white/15
+      "
+    >
 
       {/* =================================================
-          DESCRIPTION
+          DROPDOWN HEADER
       ================================================= */}
 
-      {description && (
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="
+          flex w-full
+          items-center justify-between
+          gap-4
+          px-4 py-4
+          text-left
+          transition-all duration-300
+          hover:bg-white/[0.03]
+        "
+      >
 
-        <InfoBlock
-          title="About This Service"
-          content={description}
-        />
+        <div className="flex min-w-0 items-center gap-3">
 
-      )}
+          {/* Icon */}
 
-
-      {/* =================================================
-          WHY RELEVANT
-      ================================================= */}
-
-      {reason && (
-
-        <InfoBlock
-          title="Why It Is Relevant"
-          content={reason}
-        />
-
-      )}
+          <div
+            className="
+              flex h-10 w-10
+              shrink-0
+              items-center justify-center
+              rounded-xl
+              bg-indigo-500/10
+              text-indigo-300
+            "
+          >
+            {icon}
+          </div>
 
 
-      {/* =================================================
-          ELIGIBILITY STATUS
-      ================================================= */}
+          {/* Title */}
 
-      {eligibilityStatus && (
+          <div className="min-w-0">
 
-        <div className="mt-5 rounded-xl border border-emerald-400/10 bg-emerald-400/5 p-4">
+            <p className="text-sm font-semibold text-slate-200">
+              {title}
+            </p>
 
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
-            Eligibility Assessment
-          </p>
+            {description && (
 
-          <p className="mt-2 text-sm font-semibold text-emerald-300">
-            {eligibilityStatus}
-          </p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                {description}
+              </p>
+
+            )}
+
+          </div>
 
         </div>
 
-      )}
 
+        {/* Arrow */}
 
-      {/* =================================================
-          ELIGIBILITY CONDITIONS
-      ================================================= */}
-
-      {hasContent(eligibility) && (
-
-        <InfoBlock
-          title="Eligibility Conditions"
-          content={eligibility}
-        />
-
-      )}
-
-
-      {/* =================================================
-          BENEFITS
-      ================================================= */}
-
-      {hasContent(benefits) && (
-
-        <InfoBlock
-          title="Benefits"
-          content={benefits}
-        />
-
-      )}
-
-
-      {/* =================================================
-          REQUIRED DOCUMENTS
-      ================================================= */}
-
-      {hasContent(documents) && (
-
-        <InfoBlock
-          title="Required Documents"
-          content={documents}
-        />
-
-      )}
-
-
-      {/* =================================================
-          APPLICATION PROCEDURE
-      ================================================= */}
-
-      {hasContent(application) && (
-
-        <InfoBlock
-          title="How to Apply"
-          content={application}
-        />
-
-      )}
-
-
-      {/* =================================================
-          OFFICIAL SOURCE NOTE
-      ================================================= */}
-
-      {officialSourceNote && (
-
-        <div className="mt-5 rounded-xl border border-amber-400/10 bg-amber-400/5 p-4">
-
-          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-amber-400">
-            Important
-          </p>
-
-          <p className="mt-2 text-xs leading-5 text-slate-500">
-            {officialSourceNote}
-          </p>
-
-        </div>
-
-      )}
-
-
-      {/* =================================================
-          OFFICIAL APPLICATION LINK
-      ================================================= */}
-
-      {applicationLink && (
-
-        <a
-          href={applicationLink}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-5 inline-flex rounded-xl bg-indigo-500 px-5 py-3 text-xs font-semibold text-white transition duration-300 hover:bg-indigo-400"
+        <span
+          className={`
+            shrink-0
+            text-lg
+            text-slate-500
+            transition-transform duration-300
+            ${open ? "rotate-180 text-indigo-300" : ""}
+          `}
         >
-          Visit Official Application Site →
-        </a>
+          ↓
+        </span>
+
+      </button>
+
+
+      {/* =================================================
+          DROPDOWN CONTENT
+      ================================================= */}
+
+      {open && (
+
+        <div
+          className="
+            border-t
+            border-white/5
+            px-4
+            pb-4
+            pt-4
+          "
+        >
+
+          {Array.isArray(content) ? (
+
+            <div className="space-y-2.5">
+
+              {content.map((item, index) => (
+
+                <div
+                  key={index}
+                  className="
+                    flex
+                    items-start
+                    gap-3
+                    rounded-xl
+                    border border-white/[0.04]
+                    bg-white/[0.02]
+                    px-3
+                    py-3
+                  "
+                >
+
+                  {/* Number / check */}
+
+                  <div
+                    className={`
+                      flex h-6 w-6
+                      shrink-0
+                      items-center
+                      justify-center
+                      rounded-full
+                      text-[11px]
+                      font-bold
+                      ${
+                        numbered
+                          ? "bg-indigo-500/10 text-indigo-300"
+                          : "bg-emerald-500/10 text-emerald-300"
+                      }
+                    `}
+                  >
+                    {numbered ? index + 1 : "✓"}
+                  </div>
+
+
+                  {/* Text */}
+
+                  <p className="text-sm leading-6 text-slate-400">
+                    {typeof item === "object"
+                      ? JSON.stringify(item)
+                      : String(item)}
+                  </p>
+
+                </div>
+
+              ))}
+
+            </div>
+
+          ) : typeof content === "object" ? (
+
+            <SafeContent content={content} />
+
+          ) : (
+
+            <p className="text-sm leading-6 text-slate-400">
+              {String(content)}
+            </p>
+
+          )}
+
+        </div>
 
       )}
 
     </div>
   );
 }
-
-
 // =========================================================
-// INFO BLOCK
+// RECOMMENDATION SECTION
 // =========================================================
 
-function InfoBlock({
+function RecommendationSection({
+  icon,
   title,
+  description,
   content,
+  numbered = false,
 }) {
 
+  if (!hasContent(content)) {
+    return null;
+  }
+
   return (
+    <div className="mt-6">
 
-    <div className="mt-5 rounded-xl border border-white/5 bg-white/[0.02] p-4">
+      {/* Section heading */}
 
-      <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">
-        {title}
-      </p>
+      <div className="mb-3 flex items-start gap-3">
 
-      <div className="mt-2 text-sm leading-6 text-slate-400">
+        <div
+          className="
+            flex h-8 w-8 shrink-0
+            items-center justify-center
+            rounded-lg
+            bg-white/5
+            text-sm
+            text-indigo-300
+          "
+        >
+          {icon}
+        </div>
+
+        <div className="min-w-0">
+
+          <p className="text-sm font-semibold text-slate-200">
+            {title}
+          </p>
+
+          {description && (
+            <p className="mt-0.5 text-xs text-slate-600">
+              {description}
+            </p>
+          )}
+
+        </div>
+
+      </div>
+
+      {/* Content box */}
+
+      <div
+        className="
+          rounded-2xl
+          border border-white/5
+          bg-[#0f1727]
+          p-4
+        "
+      >
 
         {Array.isArray(content) ? (
 
-          <ul className="space-y-2">
+          <div className="space-y-3">
 
-            {content.map(
-              (item, index) => (
+            {content.map((item, index) => (
 
-                <li
-                  key={index}
-                  className="flex items-start gap-2"
+              <div
+                key={index}
+                className="
+                  flex
+                  items-start
+                  gap-3
+                  rounded-xl
+                  border border-white/[0.04]
+                  bg-white/[0.02]
+                  px-3 py-3
+                "
+              >
+
+                {/* Number / check */}
+
+                <div
+                  className={`
+                    flex h-6 w-6
+                    shrink-0
+                    items-center justify-center
+                    rounded-full
+                    text-[11px]
+                    font-bold
+
+                    ${
+                      numbered
+                        ? "bg-indigo-500/10 text-indigo-300"
+                        : "bg-emerald-500/10 text-emerald-300"
+                    }
+                  `}
                 >
+                  {numbered
+                    ? index + 1
+                    : "✓"}
+                </div>
 
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" />
+                <div
+                  className="
+                    min-w-0
+                    flex-1
+                    text-sm
+                    leading-6
+                    text-slate-400
+                  "
+                >
+                  <SafeContent content={item} />
+                </div>
 
-                  <span>
-                    {String(item)}
-                  </span>
+              </div>
 
-                </li>
+            ))}
 
-              )
-            )}
-
-          </ul>
+          </div>
 
         ) : (
 
-          String(content)
+          <div
+            className="
+              text-sm
+              leading-6
+              text-slate-400
+            "
+          >
+            <SafeContent content={content} />
+          </div>
 
         )}
 
@@ -1049,11 +1898,133 @@ function InfoBlock({
 
     </div>
   );
+};
+
+
+// =========================================================
+// SAFE CONTENT RENDERER
+
+function SafeContent({ content }) {
+
+  // ---------------------------------------------------------
+  // NULL / UNDEFINED
+  // ---------------------------------------------------------
+
+  if (
+    content === null ||
+    content === undefined
+  ) {
+    return null;
+  }
+
+  // ---------------------------------------------------------
+  // STRING
+  // ---------------------------------------------------------
+
+  if (typeof content === "string") {
+    return <span>{content}</span>;
+  }
+
+  // ---------------------------------------------------------
+  // NUMBER
+  // ---------------------------------------------------------
+
+  if (typeof content === "number") {
+    return <span>{String(content)}</span>;
+  }
+
+  // ---------------------------------------------------------
+  // BOOLEAN
+  // ---------------------------------------------------------
+
+  if (typeof content === "boolean") {
+    return <span>{String(content)}</span>;
+  }
+
+  // ---------------------------------------------------------
+  // ARRAY
+  // ---------------------------------------------------------
+
+  if (Array.isArray(content)) {
+
+    return (
+      <div className="space-y-2">
+
+        {content.map((item, index) => (
+
+          <div key={index}>
+
+            <SafeContent content={item} />
+
+          </div>
+
+        ))}
+
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------
+  // OBJECT
+  // ---------------------------------------------------------
+
+  if (typeof content === "object") {
+
+    return (
+      <div className="space-y-3">
+
+        {Object.entries(content).map(
+          ([key, value]) => {
+
+            if (
+              value === null ||
+              value === undefined ||
+              value === ""
+            ) {
+              return null;
+            }
+
+            return (
+              <div key={key}>
+
+                <p
+                  className="
+                    text-xs
+                    font-medium
+                    capitalize
+                    text-slate-500
+                  "
+                >
+                  {formatLabel(key)}
+                </p>
+
+                <div className="mt-1 text-sm text-slate-400">
+                  <SafeContent content={value} />
+                </div>
+
+              </div>
+            );
+          }
+        )}
+
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------
+  // FALLBACK
+  // ---------------------------------------------------------
+
+  return (
+    <span>
+      {String(content)}
+    </span>
+  );
 }
 
 
 // =========================================================
-// CHECK CONTENT
+// CONTENT CHECK
 // =========================================================
 
 function hasContent(value) {
@@ -1069,7 +2040,25 @@ function hasContent(value) {
     return false;
   }
 
+  if (typeof value === "object") {
+    return Object.keys(value).length > 0;
+  }
+
   return String(value).trim().length > 0;
+}
+
+
+// =========================================================
+// FORMAT LABEL
+// =========================================================
+
+function formatLabel(key) {
+
+  return String(key)
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) =>
+      char.toUpperCase()
+    );
 }
 
 
@@ -1103,5 +2092,9 @@ function calculateAge(dob) {
   return age;
 }
 
+
+// =========================================================
+// EXPORT
+// =========================================================
 
 export default AIRecommendation;
