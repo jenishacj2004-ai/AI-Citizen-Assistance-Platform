@@ -14,52 +14,45 @@ function Login() {
   const [error, setError] = useState("");
 
   const handleLogin = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!email.trim() || !password.trim()) {
-      setError("Please enter your email and password.");
+  try {
+    const response = await fetch("http://127.0.0.1:8000/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email,
+        password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.detail || "Login failed");
       return;
     }
 
-    setLoading(true);
-    setError("");
+    // Store login information
+    localStorage.setItem("user_id", data.user_id);
+    localStorage.setItem("user_name", data.full_name);
+    localStorage.setItem("user_email", data.email);
+    localStorage.setItem("user_role", data.role);
 
-    try {
-      const response = await fetch("http://127.0.0.1:8000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Invalid email or password.");
-      }
-
-      // Store user information for the rest of the application
-      localStorage.setItem("user_id", data.user_id);
-      localStorage.setItem("user_name", data.name);
-
-      if (rememberMe) {
-        localStorage.setItem("remember_me", "true");
-      } else {
-        localStorage.removeItem("remember_me");
-      }
-
-      // Go to dashboard
+    // Role-based navigation
+    if (data.role === "Admin") {
+      navigate("/admin");
+    } else {
       navigate("/dashboard");
-    } catch (err) {
-      setError(err.message || "Unable to login. Please try again.");
-    } finally {
-      setLoading(false);
     }
-  };
+
+  } catch (error) {
+    console.error(error);
+    alert("Unable to connect to server");
+  }
+};
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0f172a] px-4 py-8 text-[#e4e2e4]">

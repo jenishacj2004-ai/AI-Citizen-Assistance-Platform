@@ -7,7 +7,8 @@ from sqlalchemy import (
     Numeric,
     TIMESTAMP,
     ForeignKey,
-    DateTime
+    DateTime,
+    Boolean,
 )
 
 from sqlalchemy.sql import func
@@ -45,6 +46,8 @@ class User(Base):
     # Record Creation Time
     created_at = Column(TIMESTAMP, server_default=func.now())
 
+    role = Column(String(20), nullable=False, default="Citizen")
+
 class GovernmentService(Base):
     __tablename__ = "government_services"
 
@@ -77,6 +80,8 @@ class GovernmentService(Base):
     state = Column(String(100))
 
     created_at = Column(TIMESTAMP, server_default=func.now())    
+
+    status = Column(String(20), nullable=False, default="Active")
 
 class Document(Base):
     __tablename__ = "documents"
@@ -171,3 +176,47 @@ class Document(Base):
     user = relationship("User")
 
     service = relationship("GovernmentService")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    notification_id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.user_id"),
+        nullable=False
+    )
+
+    title = Column(
+        String(200),
+        nullable=False
+    )
+
+    message = Column(
+        Text,
+        nullable=False
+    )
+
+    notification_type = Column(
+        String(50),
+        nullable=False,
+        default="General Announcement"
+    )
+
+    is_read = Column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    user = relationship("User")    

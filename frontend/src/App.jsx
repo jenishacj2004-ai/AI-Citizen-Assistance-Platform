@@ -10,6 +10,8 @@ import Eligibility from "./pages/Eligibility";
 import GovernmentServices from "./pages/GovernmentServices";
 import ServiceDetails from "./pages/ServiceDetails";
 import DocumentVerification from "./pages/DocumentVerification";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminServices from "./pages/AdminServices";
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
       <Route path="/services" element={<GovernmentServices />} />
       <Route path="/services/:serviceId" element={<ServiceDetails />} />
       <Route path="/documents" element={<DocumentVerification />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/services" element={<AdminServices />} />
     </Routes>
   );
 }

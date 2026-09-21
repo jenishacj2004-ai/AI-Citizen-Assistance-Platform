@@ -132,7 +132,8 @@ def login_user(user: schemas.UserLogin, db: Session = Depends(get_db)):
     return {
         "message": "Login successful",
         "user_id": db_user.user_id,
-        "name": db_user.full_name
+        "name": db_user.full_name,
+        "role" : db_user.role
     }
 
 @app.get("/profile/{user_id}")
@@ -960,4 +961,302 @@ def delete_document(
         "message": "Document deleted successfully",
         "document_id": document_id
     }
+def check_admin(user_id: int, db: Session):
+    user = db.query(models.User).filter(
+        models.User.user_id == user_id
+    ).first()
 
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    if user.role != "Admin":
+        raise HTTPException(
+            status_code=403,
+            detail="Admin access required"
+        )
+
+    return user
+@app.get("/admin/services")
+def admin_get_services(
+    user_id: int,
+    db: Session = Depends(get_db)
+ ):
+    check_admin(user_id, db)
+
+    services = db.query(models.GovernmentService).all()
+
+    return {
+        "status": "success",
+        "count": len(services),
+        "services": services
+    }
+
+@app.post("/admin/services")
+def admin_add_service(
+    service: schemas.AdminServiceCreate,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    check_admin(user_id, db)
+
+    existing_service = db.query(
+        models.GovernmentService
+    ).filter(
+        models.GovernmentService.service_name == service.service_name
+    ).first()
+
+    if existing_service:
+        raise HTTPException(
+            status_code=400,
+            detail="Service already exists"
+        )
+
+    new_service = models.GovernmentService(
+        service_name=service.service_name,
+        department=service.department,
+        description=service.description,
+        eligibility=service.eligibility,
+        required_documents=service.required_documents,
+        application_link=service.application_link,
+        category=service.category,
+        service_type=service.service_type,
+        age_min=service.age_min,
+        age_max=service.age_max,
+        income_limit=service.income_limit,
+        occupation=service.occupation,
+        state=service.state,
+        status="Active"
+    )
+
+    db.add(new_service)
+    db.commit()
+    db.refresh(new_service)
+
+    return {
+        "status": "success",
+        "message": "Government service added successfully",
+        "service_id": new_service.service_id
+    }
+
+ #NOTIFICATION FastAPI
+@app.post("/admin/notifications")
+def admin_create_notification(
+    notification: schemas.AdminNotificationCreate,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    # Check whether the logged-in user is an Admin
+    check_admin(user_id, db)
+
+    # Get all citizens
+    citizens = db.query(models.User).filter(
+        models.User.role == "Citizen"
+    ).all()
+
+    if not citizens:
+        raise HTTPException(
+            status_code=404,
+            detail="No citizens found"
+        )
+
+    # Create notification for every citizen
+    for citizen in citizens:
+
+        new_notification = models.Notification(
+            user_id=citizen.user_id,
+            title=notification.title,
+            message=notification.message,
+            notification_type=notification.notification_type,
+            is_read=False
+        )
+
+        db.add(new_notification)
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Announcement sent to all citizens",
+        "citizen_count": len(citizens)
+    }
+
+@app.get("/notifications")
+def get_notifications(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    # Check user
+    user = db.query(models.User).filter(
+        models.User.user_id == user_id
+    ).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    # Get notifications belonging to this citizen
+    notifications = db.query(
+        models.Notification
+    ).filter(
+        models.Notification.user_id == user_id
+    ).order_by(
+        models.Notification.created_at.desc()
+    ).all()
+
+    # Count unread notifications
+    unread_count = db.query(
+        models.Notification
+    ).filter(
+        models.Notification.user_id == user_id,
+        models.Notification.is_read == False
+    ).count()
+
+    return {
+        "status": "success",
+        "unread_count": unread_count,
+        "notifications": notifications
+    }
+
+@app.put("/notifications/{notification_id}/read")
+def mark_notification_read(
+    notification_id: int,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    notification = db.query(
+        models.Notification
+    ).filter(
+        models.Notification.notification_id == notification_id,
+        models.Notification.user_id == user_id
+    ).first()
+
+    if not notification:
+        raise HTTPException(
+            status_code=404,
+            detail="Notification not found"
+        )
+
+    notification.is_read = True
+
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Notification marked as read"
+    }    
+
+@app.put("/admin/services/{service_id}")
+def admin_update_service(
+    service_id: int,
+    service: schemas.AdminServiceUpdate,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    check_admin(user_id, db)
+
+    existing_service = db.query(
+        models.GovernmentService
+    ).filter(
+        models.GovernmentService.service_id == service_id
+    ).first()
+
+    if not existing_service:
+        raise HTTPException(
+            status_code=404,
+            detail="Government service not found"
+        )
+
+    existing_service.service_name = service.service_name
+    existing_service.department = service.department
+    existing_service.description = service.description
+    existing_service.eligibility = service.eligibility
+    existing_service.required_documents = service.required_documents
+    existing_service.application_link = service.application_link
+    existing_service.category = service.category
+    existing_service.service_type = service.service_type
+    existing_service.age_min = service.age_min
+    existing_service.age_max = service.age_max
+    existing_service.income_limit = service.income_limit
+    existing_service.occupation = service.occupation
+    existing_service.state = service.state
+
+    db.commit()
+    db.refresh(existing_service)
+
+    return {
+        "status": "success",
+        "message": "Government service updated successfully",
+        "service_id": existing_service.service_id
+    }   
+
+@app.delete("/admin/services/{service_id}")
+def admin_delete_service(
+    service_id: int,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    check_admin(user_id, db)
+
+    existing_service = db.query(
+        models.GovernmentService
+    ).filter(
+        models.GovernmentService.service_id == service_id
+    ).first()
+
+    if not existing_service:
+        raise HTTPException(
+            status_code=404,
+            detail="Government service not found"
+        )
+
+    db.delete(existing_service)
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": "Government service deleted successfully"
+    }
+
+@app.put("/admin/services/{service_id}/status")
+def admin_update_service_status(
+    service_id: int,
+    status_data: schemas.AdminServiceStatus,
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    check_admin(user_id, db)
+
+    existing_service = db.query(
+        models.GovernmentService
+    ).filter(
+        models.GovernmentService.service_id == service_id
+    ).first()
+
+    if not existing_service:
+        raise HTTPException(
+            status_code=404,
+            detail="Government service not found"
+        )
+
+    if status_data.status not in ["Active", "Inactive"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Status must be Active or Inactive"
+        )
+
+    existing_service.status = status_data.status
+
+    db.commit()
+    db.refresh(existing_service)
+
+    return {
+        "status": "success",
+        "message": f"Service status changed to {status_data.status}",
+        "service_id": service_id,
+        "service_status": existing_service.status
+    }

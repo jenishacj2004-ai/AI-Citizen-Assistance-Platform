@@ -46,3 +46,50 @@ class DocumentResponse(BaseModel):
 
     class Config:
         from_attributes = True    
+
+class LoginResponse(BaseModel):
+    user_id: int
+    full_name: str
+    email: EmailStr
+    role: str     
+
+class AdminServiceCreate(BaseModel):
+    service_name: str
+    department: str
+    description: str
+    eligibility: str
+    required_documents: str
+    application_link: str
+    category: str
+    service_type: str
+    age_min: int = 0
+    age_max: int = 120
+    income_limit: Decimal
+    occupation: str
+    state: str
+
+
+class AdminServiceUpdate(BaseModel):
+    service_name: str
+    department: str
+    description: str
+    eligibility: str
+    required_documents: str
+    application_link: str
+    category: str
+    service_type: str
+    age_min: int = 0
+    age_max: int = 120
+    income_limit: Decimal
+    occupation: str
+    state: str
+
+
+class AdminServiceStatus(BaseModel):
+    status: str
+
+class AdminNotificationCreate(BaseModel):
+    title: str
+    message: str
+    notification_type: str = "General Announcement"
+    
