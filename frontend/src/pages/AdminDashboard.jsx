@@ -75,6 +75,25 @@ function AdminDashboard() {
             </button>
 
           </div>
+          {/* Notifications */}
+          <div className="rounded-xl border border-gray-700 bg-[#111c30] p-6">
+
+            <h3 className="mb-2 text-lg font-semibold">
+            Notifications
+            </h3>
+
+          <p className="mb-5 text-sm text-gray-400">
+            Send announcements and important updates to citizens.
+          </p>
+
+          <button
+          onClick={() => navigate("/admin/notifications")}
+          className="rounded-lg bg-blue-600 px-4 py-2 font-medium hover:bg-blue-700"
+        >
+        Send Announcement
+        </button>
+
+      </div>
 
           {/* Users */}
           <div className="rounded-xl border border-gray-700 bg-[#111c30] p-6">

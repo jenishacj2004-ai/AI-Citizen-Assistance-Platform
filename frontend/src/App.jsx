@@ -12,6 +12,7 @@ import ServiceDetails from "./pages/ServiceDetails";
 import DocumentVerification from "./pages/DocumentVerification";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminServices from "./pages/AdminServices";
+import AdminNotifications from "./pages/AdminNotifications";
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
       <Route path="/documents" element={<DocumentVerification />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/services" element={<AdminServices />} />
+      <Route path="/admin/notifications" element={<AdminNotifications />}/>
     </Routes>
   );
 }

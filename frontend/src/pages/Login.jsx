@@ -30,6 +30,9 @@ function Login() {
 
     const data = await response.json();
 
+    console.log("LOGIN RESPONSE:", data);
+    console.log("FULL NAME:", data.name);
+
     if (!response.ok) {
       alert(data.detail || "Login failed");
       return;
@@ -37,7 +40,7 @@ function Login() {
 
     // Store login information
     localStorage.setItem("user_id", data.user_id);
-    localStorage.setItem("user_name", data.full_name);
+    localStorage.setItem("user_name", data.name);
     localStorage.setItem("user_email", data.email);
     localStorage.setItem("user_role", data.role);
 
