@@ -180,3 +180,46 @@ img {
     overflow-x: hidden;
   }
 }
+
+.notification-marquee {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.notification-track {
+  display: inline-flex;
+  min-width: max-content;
+  animation: notification-scroll 25s linear infinite;
+}
+
+.notification-track:hover {
+  animation-play-state: paused;
+}
+
+.notification-item {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 80px;
+  padding: 0 20px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+}
+
+.notification-item:hover {
+  opacity: 0.8;
+}
+
+@keyframes notification-scroll {
+
+  0% {
+    transform: translateX(100%);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+
+}

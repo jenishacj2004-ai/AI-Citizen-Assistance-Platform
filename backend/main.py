@@ -345,6 +345,8 @@ def recommend_services(
 
         "recommendations": ai_response
     }
+
+
 @app.get("/government-services")
 def get_government_services(
     db: Session = Depends(get_db)

@@ -1,10 +1,48 @@
 import { Link, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+
+
 
 function Dashboard() {
+
   const navigate = useNavigate();
+  const userId = localStorage.getItem("user_id");
+
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationLoading, setNotificationLoading] = useState(true);
 
   const userName = localStorage.getItem("user_name") || "Citizen";
 
+  const fetchNotifications = async () => {
+    try {
+      setNotificationLoading(true);
+
+      const response = await fetch(
+        `http://127.0.0.1:8000/notifications?user_id=${userId}`
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error(data.detail);
+      return;
+      }
+
+      setNotifications(data.notifications || []);
+      setUnreadCount(data.unread_count || 0);
+
+      } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+      } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchNotifications();
+    }, []);
   return (
     <div className="min-h-screen bg-[#0b1220] text-white">
 
@@ -66,8 +104,7 @@ function Dashboard() {
             <SidebarItem
               icon="◉"
               label="Notifications"
-              onClick={() => {}}
-            />
+              onClick={() => navigate("/notifications")} />
 
           </div>
 
@@ -145,13 +182,21 @@ function Dashboard() {
               />
 
               <TopButton label="Notifications" />
+              
 
               <TopButton label="Help" />
 
               <button
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"
+                onClick={() => navigate("/notifications")}
+                className="relative rounded-lg bg-blue-600 px-4 py-2 font-medium hover:bg-blue-700"
               >
-                🔔
+                🔔 Notifications
+
+                {unreadCount > 0 && (
+              <span className="absolute -right-2 -top-2 flex h-6 min-w-6 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold text-white">
+                {unreadCount}
+              </span>
+                )}
               </button>
 
               <div className="ml-2 flex items-center gap-3 border-l border-white/10 pl-4">
@@ -313,6 +358,106 @@ function Dashboard() {
             </div>
 
           </section>
+       {/* Right Side Moving Notification Bar */}
+<div className="ml-auto w-full max-w-lg">
+
+  <div className="overflow-hidden rounded-lg border border-blue-500/40 bg-[#111c30]/70 shadow-lg backdrop-blur-md">
+
+    {/* Notification Header */}
+    <div className="flex items-center justify-between border-b border-gray-700/60 px-4 py-2">
+
+      <div className="flex items-center gap-2">
+        <span className="text-lg">🔔</span>
+
+        <span className="text-sm font-semibold text-white">
+          Notifications
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+
+        {unreadCount > 0 && (
+          <span className="rounded-full bg-red-600/90 px-2 py-0.5 text-xs font-semibold text-white">
+            {unreadCount} New
+          </span>
+        )}
+
+        <button
+          onClick={() => navigate("/notifications")}
+          className="text-xs text-blue-400 transition hover:text-blue-300"
+        >
+          View All
+        </button>
+
+      </div>
+
+    </div>
+
+
+    {/* Moving Notification */}
+    <div className="overflow-hidden bg-black/20 py-3">
+
+      {notificationLoading ? (
+
+        <p className="px-4 text-center text-xs text-gray-400">
+          Loading notifications...
+        </p>
+
+      ) : notifications.filter(
+          (notification) => !notification.is_read
+        ).length === 0 ? (
+
+        <p className="px-4 text-center text-xs text-gray-500">
+          No new notifications
+        </p>
+
+      ) : (
+
+        <div className="notification-marquee">
+
+          <div className="notification-track">
+
+            {notifications
+              .filter((notification) => !notification.is_read)
+              .map((notification) => (
+
+                <button
+                  key={notification.notification_id}
+                  onClick={() => navigate("/notifications")}
+                  className="notification-item"
+                >
+
+                  <span className="mr-2 text-blue-400">
+                    📢
+                  </span>
+
+                  <span className="font-medium text-gray-200">
+                    {notification.title}
+                  </span>
+
+                  <span className="mx-3 text-gray-500">
+                    •
+                  </span>
+
+                  <span className="text-gray-400">
+                    {notification.message}
+                  </span>
+
+                </button>
+
+              ))}
+
+          </div>
+
+        </div>
+
+      )}
+
+    </div>
+
+  </div>
+
+</div>
 
           {/* ================= MAIN DASHBOARD CARDS ================= */}
           <section className="mt-7 grid gap-6 xl:grid-cols-2">
