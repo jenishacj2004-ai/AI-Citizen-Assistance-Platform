@@ -83,6 +83,35 @@ class GovernmentService(Base):
 
     status = Column(String(20), nullable=False, default="Active")
 
+    eligibility_mode = Column(String(50), nullable=False, default="Rule Based")
+
+    applicant_type = Column(String(100), nullable=False, default="Self")
+class ServiceEligibilityRule(Base):
+    
+    __tablename__ = "service_eligibility_rules"
+
+    rule_id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+
+    service_id = Column(
+        Integer,
+        ForeignKey("government_services.service_id"),
+        nullable=False
+    )
+
+    rule_type = Column(String(50), nullable=False)
+
+    field_name = Column(String(100), nullable=False)
+    
+    operator = Column(String(20), nullable=False)
+    
+    rule_value = Column(String(255), nullable=False)
+
+    logical_group = Column(Integer, default=1)
+
+    description = Column(Text, nullable=True)
+
+    service = relationship("GovernmentService")
+
 class Document(Base):
     __tablename__ = "documents"
 

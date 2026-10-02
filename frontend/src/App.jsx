@@ -12,6 +12,7 @@ import ServiceDetails from "./pages/ServiceDetails";
 import DocumentVerification from "./pages/DocumentVerification";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminServices from "./pages/AdminServices";
+import AdminEligibilityRules from "./pages/AdminEligibilityRules";
 import AdminNotifications from "./pages/AdminNotifications";
 import Notifications from "./pages/Notifications";
 
@@ -30,6 +31,7 @@ function App() {
       <Route path="/documents" element={<DocumentVerification />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/services" element={<AdminServices />} />
+      <Route path="/admin/services/:serviceId/eligibility-rules" element={<AdminEligibilityRules />} />
       <Route path="/admin/notifications" element={<AdminNotifications />}/>
       <Route path="/notifications" element={<Notifications />} />
     </Routes>

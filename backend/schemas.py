@@ -93,3 +93,24 @@ class AdminNotificationCreate(BaseModel):
     message: str
     notification_type: str = "General Announcement"
     
+class EligibilityRuleCreate(BaseModel):
+    service_id: int
+    rule_type: str
+    field_name: str
+    operator: str
+    rule_value: str
+    logical_group: int = 1
+    description: Optional[str] = None
+
+
+class EligibilityRuleUpdate(BaseModel):
+    rule_type: str
+    field_name: str
+    operator: str
+    rule_value: str
+    logical_group: int = 1
+    description: Optional[str] = None
+
+class EligibilityCheckRequest(BaseModel):
+    service_id: int
+    answers: Dict[str, Any] = {}    

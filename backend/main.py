@@ -24,6 +24,9 @@ import os
 import shutil
 import uuid
 import json
+import eligibility_rules
+import dynamic_eligibility
+import eligibility_checker
 
 from pathlib import Path
 
@@ -43,6 +46,9 @@ app = FastAPI(
     title="AI-Powered Citizen Assistance Platform API",
     version="1.0"
 )
+app.include_router(eligibility_rules.router)
+app.include_router(dynamic_eligibility.router)
+app.include_router(eligibility_checker.router)
 
 # Upload directory
 UPLOAD_DIR = Path("uploads")

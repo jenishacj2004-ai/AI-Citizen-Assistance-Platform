@@ -290,7 +290,16 @@ function AdminServices() {
                   >
                     Edit
                   </button>
-
+                    <button
+                      onClick={() =>
+                          navigate(
+                      `/admin/services/${service.service_id}/eligibility-rules`
+                             )
+                           }
+                        className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium hover:bg-purple-700"
+                        >
+                  Eligibility Rules
+                  </button>
                   <button
                     onClick={() => changeStatus(service)}
                     className={`rounded-lg px-4 py-2 text-sm font-medium ${

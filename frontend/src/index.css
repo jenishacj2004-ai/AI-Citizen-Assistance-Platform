@@ -181,36 +181,207 @@ img {
   }
 }
 
+/* ==========================================
+   DASHBOARD RIGHT-SIDE NOTIFICATION
+   ========================================== */
+
+.dashboard-notification-box {
+  width: 100%;
+  max-width: 420px;
+  margin-left: auto;
+
+  overflow: hidden;
+
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 12px;
+
+  background: rgba(17, 28, 48, 0.65);
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+}
+
+
+/* Header */
+
+.notification-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  min-height: 45px;
+
+  padding: 0 14px;
+
+  border-bottom: 1px solid rgba(107, 114, 128, 0.25);
+}
+
+
+/* New badge */
+
+.notification-new-badge {
+  padding: 3px 8px;
+
+  border-radius: 999px;
+
+  background: rgba(220, 38, 38, 0.85);
+
+  color: white;
+
+  font-size: 10px;
+  font-weight: 600;
+}
+
+
+/* View all */
+
+.notification-view-button {
+  border: none;
+  background: transparent;
+
+  color: #60a5fa;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  cursor: pointer;
+
+  transition: color 0.2s ease;
+}
+
+.notification-view-button:hover {
+  color: #93c5fd;
+}
+
+
+/* Ticker */
+
+.notification-ticker-container {
+  width: 100%;
+
+  min-height: 45px;
+
+  display: flex;
+  align-items: center;
+
+  overflow: hidden;
+
+  background: rgba(3, 7, 18, 0.35);
+}
+
+
+/* Empty / loading */
+
+.notification-empty {
+  width: 100%;
+
+  padding: 12px;
+
+  text-align: center;
+
+  color: #6b7280;
+
+  font-size: 11px;
+}
+
+
+/* Marquee 
+
 .notification-marquee {
   width: 100%;
+
   overflow: hidden;
+
   white-space: nowrap;
 }
 
+
+/* Moving track 
+
 .notification-track {
   display: inline-flex;
+
+  align-items: center;
+
   min-width: max-content;
-  animation: notification-scroll 25s linear infinite;
+
+  animation: notification-scroll 18s linear infinite;
 }
+*/
+
+/* Pause when mouse is over notification */
 
 .notification-track:hover {
   animation-play-state: paused;
 }
 
+
+/* Individual notification */
+
 .notification-item {
   display: inline-flex;
+
   align-items: center;
-  margin-right: 80px;
-  padding: 0 20px;
-  cursor: pointer;
-  background: transparent;
+
+  margin-right: 70px;
+
+  padding: 0 15px;
+
   border: none;
-  font-size: 14px;
+
+  background: transparent;
+
+  cursor: pointer;
+
+  white-space: nowrap;
+
+  font-size: 12px;
+
+  transition: opacity 0.2s ease;
 }
 
 .notification-item:hover {
-  opacity: 0.8;
+  opacity: 0.75;
 }
+
+
+/* Bell / announcement icon */
+
+.notification-icon {
+  margin-right: 7px;
+
+  font-size: 13px;
+}
+
+
+/* Title */
+
+.notification-title {
+  color: #f3f4f6;
+
+  font-weight: 600;
+}
+
+
+/* Separator */
+
+.notification-separator {
+  margin: 0 8px;
+
+  color: #4b5563;
+}
+
+
+/* Message */
+
+.notification-message {
+  color: #9ca3af;
+}
+
+
+/* Animation */
 
 @keyframes notification-scroll {
 
@@ -220,6 +391,156 @@ img {
 
   100% {
     transform: translateX(-100%);
+  }
+
+}
+/* ==========================================
+   VERTICAL NOTIFICATION TICKER
+   ========================================== */
+
+.notification-ticker-container {
+  height: 110px;
+  overflow: hidden;
+
+  background: rgba(3, 7, 18, 0.35);
+
+  display: flex;
+  align-items: center;
+}
+
+
+/* Visible notification area */
+
+.notification-vertical-window {
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+}
+
+
+/* Moving notification track */
+
+.notification-vertical-track {
+  display: flex;
+  flex-direction: column;
+
+  animation: notification-vertical-scroll 10s linear infinite;
+}
+
+
+/* Pause when mouse is over it */
+
+.notification-vertical-track:hover {
+  animation-play-state: paused;
+}
+
+
+/* Individual notification */
+
+.notification-vertical-item {
+  width: 100%;
+  min-height: 55px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  padding: 8px 15px;
+
+  border: none;
+  border-bottom: 1px solid rgba(107, 114, 128, 0.15);
+
+  background: transparent;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition: background 0.2s ease;
+}
+
+
+.notification-vertical-item:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+
+/* Notification title */
+
+.notification-title {
+  color: #f3f4f6;
+
+  font-size: 12px;
+  font-weight: 600;
+}
+
+
+/* Message */
+
+.notification-message {
+  margin-top: 3px;
+
+  color: #9ca3af;
+
+  font-size: 10px;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* Notification icon */
+
+.notification-icon {
+  font-size: 12px;
+}
+
+
+/* New badge */
+
+.notification-new-text {
+  padding: 2px 5px;
+
+  border-radius: 999px;
+
+  background: rgba(220, 38, 38, 0.85);
+
+  color: white;
+
+  font-size: 8px;
+  font-weight: 700;
+}
+
+
+/* Empty state */
+
+.notification-empty {
+  width: 100%;
+
+  padding: 12px;
+
+  text-align: center;
+
+  color: #6b7280;
+
+  font-size: 11px;
+}
+
+
+/* ==========================================
+   SLOW VERTICAL MOVEMENT
+   ========================================== */
+
+@keyframes notification-vertical-scroll {
+
+  0% {
+    transform: translateY(100%);
+  }
+
+  100% {
+    transform: translateY(-100%);
   }
 
 }
