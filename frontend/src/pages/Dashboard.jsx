@@ -102,9 +102,10 @@ function Dashboard() {
           onClick={() => navigate("/documents")} />
 
             <SidebarItem
-              icon="◉"
-              label="Notifications"
-              onClick={() => navigate("/notifications")} />
+        icon="◉"
+       label="Notifications"
+      onClick={() => navigate("/notifications")}
+        />
 
           </div>
 

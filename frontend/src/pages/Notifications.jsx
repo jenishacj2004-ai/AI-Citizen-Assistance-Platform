@@ -15,13 +15,18 @@ function Notifications() {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!userId) {
+      navigate("/login");
+      return;
+    }
+
     if (role !== "Citizen") {
       navigate("/login");
       return;
     }
 
     fetchNotifications();
-  }, [role, navigate]);
+  }, [userId, role, navigate]);
 
   const fetchNotifications = async () => {
     try {
@@ -43,7 +48,7 @@ function Notifications() {
       setUnreadCount(data.unread_count || 0);
 
     } catch (error) {
-      console.error(error);
+      console.error("Notification error:", error);
       setError("Unable to connect to backend.");
     } finally {
       setLoading(false);
@@ -79,7 +84,7 @@ function Notifications() {
       );
 
     } catch (error) {
-      console.error(error);
+      console.error("Mark read error:", error);
       setError("Unable to connect to backend.");
     }
   };
@@ -105,13 +110,13 @@ function Notifications() {
           </h1>
 
           <p className="text-sm text-gray-400">
-            Stay updated with important announcements
+            Stay updated with important announcements and service updates.
           </p>
         </div>
 
         <button
           onClick={() => navigate("/dashboard")}
-          className="rounded-lg bg-gray-600 px-4 py-2 font-medium hover:bg-gray-700"
+          className="rounded-lg bg-gray-600 px-4 py-2 font-medium transition hover:bg-gray-700"
         >
           Back to Dashboard
         </button>
@@ -139,7 +144,7 @@ function Notifications() {
 
             <button
               onClick={fetchNotifications}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-700"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium transition hover:bg-blue-700"
             >
               Refresh
             </button>
@@ -162,8 +167,8 @@ function Notifications() {
             </div>
           )}
 
-          {/* No notifications */}
-          {!loading && notifications.length === 0 && (
+          {/* Empty */}
+          {!loading && !error && notifications.length === 0 && (
             <div className="rounded-xl border border-gray-700 bg-[#111c30] p-10 text-center">
 
               <div className="mb-3 text-4xl">
@@ -189,7 +194,7 @@ function Notifications() {
 
                 <div
                   key={notification.notification_id}
-                  className={`rounded-xl border p-5 ${
+                  className={`rounded-xl border p-5 transition ${
                     notification.is_read
                       ? "border-gray-700 bg-[#111c30]"
                       : "border-blue-700 bg-blue-900/20"
@@ -218,7 +223,7 @@ function Notifications() {
                         {notification.message}
                       </p>
 
-                      <div className="flex flex-wrap gap-3 text-xs text-gray-400">
+                      <div className="flex flex-wrap gap-4 text-xs text-gray-400">
 
                         <span>
                           Type: {notification.notification_type}
@@ -237,7 +242,7 @@ function Notifications() {
                         onClick={() =>
                           markAsRead(notification.notification_id)
                         }
-                        className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium hover:bg-blue-700"
+                        className="whitespace-nowrap rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium transition hover:bg-blue-700"
                       >
                         Mark as Read
                       </button>

@@ -24,16 +24,19 @@ function App() {
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/profile" element={<Profile />} />
+
       <Route path="/recommendation" element={<AIRecommendation />}  />
       <Route path="/eligibility" element={<Eligibility />} />
       <Route path="/services" element={<GovernmentServices />} />
       <Route path="/services/:serviceId" element={<ServiceDetails />} />
       <Route path="/documents" element={<DocumentVerification />} />
+       <Route path="/notifications" element={<Notifications />} />
+
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/services" element={<AdminServices />} />
       <Route path="/admin/services/:serviceId/eligibility-rules" element={<AdminEligibilityRules />} />
       <Route path="/admin/notifications" element={<AdminNotifications />}/>
-      <Route path="/notifications" element={<Notifications />} />
+     
     </Routes>
   );
 }
