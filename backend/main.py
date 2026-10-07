@@ -64,7 +64,10 @@ app.mount(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173"
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -375,10 +378,15 @@ def get_government_services(
             "service_type": service.service_type,
             "age_min": service.age_min,
             "age_max": service.age_max,
-            "income_limit": float(service.income_limit),
+            "income_limit": float(service.income_limit)
+            if service.income_limit is not None
+            else None,
             "occupation": service.occupation,
             "state": service.state,
-            "category": service.category
+            "category": service.category,
+            "eligibility_mode": service.eligibility_mode or "Rule Based",
+            "applicant_type": service.applicant_type or "Self",
+            "status": service.status or "Active"
         })
 
     return {
@@ -419,7 +427,10 @@ def get_government_service(
         else None,
         "occupation": service.occupation,
         "state": service.state,
-        "category": service.category
+        "category": service.category,
+        "eligibility_mode": service.eligibility_mode or "Rule Based",
+        "applicant_type": service.applicant_type or "Self",
+        "status": service.status or "Active"
     }
 
 @app.post("/documents/upload")
@@ -1036,7 +1047,9 @@ def admin_add_service(
         income_limit=service.income_limit,
         occupation=service.occupation,
         state=service.state,
-        status="Active"
+        status="Active",
+        eligibility_mode=service.eligibility_mode or "Rule Based",
+        applicant_type=service.applicant_type or "Self"
     )
 
     db.add(new_service)
@@ -1192,6 +1205,10 @@ def admin_update_service(
     existing_service.income_limit = service.income_limit
     existing_service.occupation = service.occupation
     existing_service.state = service.state
+    if service.eligibility_mode is not None:
+        existing_service.eligibility_mode = service.eligibility_mode
+    if service.applicant_type is not None:
+        existing_service.applicant_type = service.applicant_type
 
     db.commit()
     db.refresh(existing_service)

@@ -4,8 +4,15 @@ import { Link, useNavigate } from "react-router-dom";
 function Eligibility() {
   const navigate = useNavigate();
 
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [eligibleServices, setEligibleServices] = useState([]);
+  const [informationRequiredServices, setInformationRequiredServices] =
+    useState([]);
+  const [applicantSpecificServices, setApplicantSpecificServices] = useState(
+    []
+  );
 
   const userId = localStorage.getItem("user_id");
 
@@ -15,110 +22,174 @@ function Eligibility() {
       return;
     }
 
-    checkUser();
+    loadEligibilityServices();
   }, [userId, navigate]);
 
   /*
    * ---------------------------------------------------------
-   * CHECK USER
+   * LOAD ELIGIBILITY SERVICES
    * ---------------------------------------------------------
    *
-   * For now this only verifies that the user profile exists.
-   *
-   * Later the eligibility API will return the three
-   * service categories dynamically.
+   * 1. Get all government services
+   * 2. Check each active service
+   * 3. Divide services into:
+   *    - Eligible
+   *    - Information Required
+   *    - Applicant Specific
    */
 
-  const checkUser = async () => {
+  const loadEligibilityServices = async () => {
     try {
-      setLoadingProfile(true);
+      setLoading(true);
       setError("");
 
-      const response = await fetch(
-        `http://127.0.0.1:8000/profile/${userId}`
+      /*
+       * STEP 1:
+       * Get all government services
+       */
+
+      const servicesResponse = await fetch(
+        "http://127.0.0.1:8000/government-services"
       );
 
-      const data = await response.json();
+      const servicesData = await servicesResponse.json();
 
-      if (!response.ok) {
+      if (!servicesResponse.ok) {
         throw new Error(
-          data.detail || "Unable to verify your profile."
+          servicesData.detail || "Unable to load government services."
         );
       }
+
+      /*
+       * Some APIs return:
+       *
+       * [
+       *   {...},
+       *   {...}
+       * ]
+       *
+       * Others return:
+       *
+       * {
+       *   services: [...]
+       * }
+       *
+       * Handle both.
+       */
+
+      const services = Array.isArray(servicesData)
+        ? servicesData
+        : servicesData.services || [];
+
+      /*
+       * Only active services should be checked.
+       */
+
+      const activeServices = services.filter(
+        (service) =>
+          !service.status ||
+          service.status.toLowerCase() === "active"
+      );
+
+      const eligible = [];
+      const informationRequired = [];
+      const applicantSpecific = [];
+
+      /*
+       * -------------------------------------------------------
+       * STEP 2:
+       * Check every service
+       * -------------------------------------------------------
+       */
+
+      for (const service of activeServices) {
+        /*
+         * CASE 1: Applicant-Specific Services
+         * If applicant_type is not "Self" (e.g. Parent / Guardian, Family Member, etc.)
+         * it belongs under Specific Applicant Services.
+         */
+        const applicantType = (service.applicant_type || "Self").trim().toLowerCase();
+        if (applicantType !== "self") {
+          applicantSpecific.push(service);
+          continue;
+        }
+
+        /*
+         * CASE 2: Event-Based Services
+         * If eligibility_mode is "Event Based" (and applicant_type is "Self"),
+         * event-specific information may be required.
+         */
+        const eligibilityMode = (service.eligibility_mode || "").trim().toLowerCase();
+        if (eligibilityMode === "event based") {
+          informationRequired.push(service);
+          continue;
+        }
+
+        /*
+         * CASE 3 & CASE 4: Profile-Based or Rule-Based Services
+         * Check eligibility using backend rule engine.
+         */
+        try {
+          const eligibilityResponse = await fetch(
+            "http://127.0.0.1:8000/eligibility/check",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                user_id: Number(userId),
+                service_id: service.service_id,
+                answers: {},
+              }),
+            }
+          );
+
+          const eligibilityData = await eligibilityResponse.json();
+
+          /*
+           * Classify based on backend evaluation result
+           */
+          if (eligibilityData.status === "ELIGIBLE") {
+            eligible.push(service);
+          } else if (eligibilityData.status === "INFORMATION REQUIRED") {
+            informationRequired.push(service);
+          } else if (eligibilityData.status === "APPLICANT SPECIFIC") {
+            applicantSpecific.push(service);
+          }
+          /*
+           * Services with status "NOT ELIGIBLE", "UNCONFIGURED", or "NOT APPLICABLE"
+           * are safely not displayed.
+           */
+        } catch (serviceError) {
+          console.error(
+            `Eligibility check failed for service ${service.service_id}:`,
+            serviceError
+          );
+        }
+      }
+
+      /*
+       * -------------------------------------------------------
+       * STEP 3:
+       * Update the three sections
+       * -------------------------------------------------------
+       */
+
+      setEligibleServices(eligible);
+      setInformationRequiredServices(informationRequired);
+      setApplicantSpecificServices(applicantSpecific);
     } catch (err) {
+      console.error("Eligibility loading error:", err);
+
       setError(
-        err.message || "Unable to verify your profile."
+        err.message ||
+          "Unable to load eligibility information."
       );
     } finally {
-      setLoadingProfile(false);
+      setLoading(false);
     }
   };
-
-  /*
-   * ---------------------------------------------------------
-   * TEMPORARY FRONTEND DATA
-   * ---------------------------------------------------------
-   *
-   * These are only sample services for the frontend UI.
-   *
-   * Later these will be replaced by the backend response:
-   *
-   * GET /eligible-services/{user_id}
-   *
-   */
-
-  const eligibleServices = [
-    {
-      service_id: 1,
-      service_name: "Income Certificate",
-      department: "Revenue Department",
-      service_type: "Certificate",
-    },
-    {
-      service_id: 2,
-      service_name: "EWS Certificate",
-      department: "Revenue Department",
-      service_type: "Certificate",
-    },
-    {
-      service_id: 3,
-      service_name: "Residence Certificate",
-      department: "Revenue Department",
-      service_type: "Certificate",
-    },
-  ];
-
-  const informationRequiredServices = [
-    {
-      service_id: 4,
-      service_name: "PM-KISAN",
-      department: "Department of Agriculture",
-      service_type: "Agricultural Scheme",
-    },
-    {
-      service_id: 5,
-      service_name: "Disability Certificate",
-      department: "Social Justice Department",
-      service_type: "Certificate",
-    },
-  ];
-
-  const applicantSpecificServices = [
-    {
-      service_id: 6,
-      service_name: "Birth Certificate",
-      department: "Local Government",
-      service_type: "Certificate",
-      applicant_type: "Parent / Guardian",
-    },
-    {
-      service_id: 7,
-      service_name: "Death Certificate",
-      department: "Local Government",
-      service_type: "Certificate",
-      applicant_type: "Family Member / Authorized Person",
-    },
-  ];
 
   return (
     <div className="min-h-screen w-full bg-[#0b1220] text-white">
@@ -185,13 +256,13 @@ function Eligibility() {
             <SidebarItem
               icon="▧"
               label="Documents"
-              onClick={() => {}}
+              onClick={() => navigate("/documents")}
             />
 
             <SidebarItem
               icon="◉"
               label="Notifications"
-              onClick={() => {}}
+              onClick={() => navigate("/notifications")}
             />
 
           </div>
@@ -320,7 +391,7 @@ function Eligibility() {
               LOADING
           ====================================================== */}
 
-          {loadingProfile ? (
+          {loading ? (
 
             <div className="space-y-6">
 
@@ -331,10 +402,6 @@ function Eligibility() {
             </div>
 
           ) : (
-
-            /* ===================================================
-               THREE SERVICE SECTIONS
-            ==================================================== */
 
             <div className="space-y-6">
 
@@ -351,14 +418,21 @@ function Eligibility() {
                 badgeStyle="bg-emerald-400/10 text-emerald-300"
               >
 
-                {eligibleServices.map((service) => (
-                  <ServiceListItem
-                    key={service.service_id}
-                    service={service}
-                    status="eligible"
-                    navigate={navigate}
-                  />
-                ))}
+                {eligibleServices.length > 0 ? (
+                  eligibleServices.map((service) => (
+                    <ServiceListItem
+                      key={service.service_id}
+                      service={service}
+                      status="eligible"
+                      navigate={navigate}
+                    />
+                  ))
+                ) : (
+                  <EmptyMessage>
+                    No eligible services were found based on your
+                    current profile.
+                  </EmptyMessage>
+                )}
 
               </ServiceSection>
 
@@ -375,14 +449,20 @@ function Eligibility() {
                 badgeStyle="bg-amber-400/10 text-amber-300"
               >
 
-                {informationRequiredServices.map((service) => (
-                  <ServiceListItem
-                    key={service.service_id}
-                    service={service}
-                    status="information"
-                    navigate={navigate}
-                  />
-                ))}
+                {informationRequiredServices.length > 0 ? (
+                  informationRequiredServices.map((service) => (
+                    <ServiceListItem
+                      key={service.service_id}
+                      service={service}
+                      status="information"
+                      navigate={navigate}
+                    />
+                  ))
+                ) : (
+                  <EmptyMessage>
+                    No additional information is currently required.
+                  </EmptyMessage>
+                )}
 
               </ServiceSection>
 
@@ -399,14 +479,20 @@ function Eligibility() {
                 badgeStyle="bg-indigo-400/10 text-indigo-300"
               >
 
-                {applicantSpecificServices.map((service) => (
-                  <ServiceListItem
-                    key={service.service_id}
-                    service={service}
-                    status="applicant"
-                    navigate={navigate}
-                  />
-                ))}
+                {applicantSpecificServices.length > 0 ? (
+                  applicantSpecificServices.map((service) => (
+                    <ServiceListItem
+                      key={service.service_id}
+                      service={service}
+                      status="applicant"
+                      navigate={navigate}
+                    />
+                  ))
+                ) : (
+                  <EmptyMessage>
+                    No applicant-specific services are currently available.
+                  </EmptyMessage>
+                )}
 
               </ServiceSection>
 
@@ -477,8 +563,6 @@ function ServiceSection({
   return (
     <section className="rounded-2xl border border-white/10 bg-[#141d2e] p-6">
 
-      {/* SECTION HEADER */}
-
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
         <div className="flex items-start gap-4">
@@ -511,12 +595,8 @@ function ServiceSection({
 
       </div>
 
-      {/* SERVICE LIST */}
-
       <div className="mt-6 space-y-3">
-
         {children}
-
       </div>
 
     </section>
@@ -550,7 +630,7 @@ function ServiceListItem({
   }
 
   if (status === "applicant") {
-    statusText = service.applicant_type;
+    statusText = service.applicant_type || "Specific Applicant";
     statusStyle = "bg-indigo-400/10 text-indigo-300";
     buttonText = "View Service Details →";
   }
@@ -561,8 +641,6 @@ function ServiceListItem({
       {/* SERVICE INFORMATION */}
 
       <div className="flex min-w-0 items-center gap-4">
-
-        {/* ICON */}
 
         <div
           className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg ${
@@ -579,8 +657,6 @@ function ServiceListItem({
             ? "!"
             : "👤"}
         </div>
-
-        {/* NAME + DEPARTMENT */}
 
         <div className="min-w-0">
 
@@ -617,6 +693,19 @@ function ServiceListItem({
 
       </div>
 
+    </div>
+  );
+}
+
+
+/* =========================================================
+   EMPTY MESSAGE
+========================================================= */
+
+function EmptyMessage({ children }) {
+  return (
+    <div className="rounded-xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-6 text-center text-xs text-slate-500">
+      {children}
     </div>
   );
 }

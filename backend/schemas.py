@@ -1,6 +1,6 @@
 from datetime import date
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from pydantic import BaseModel, EmailStr
 
@@ -67,6 +67,8 @@ class AdminServiceCreate(BaseModel):
     income_limit: Decimal
     occupation: str
     state: str
+    eligibility_mode: Optional[str] = "Rule Based"
+    applicant_type: Optional[str] = "Self"
 
 
 class AdminServiceUpdate(BaseModel):
@@ -83,6 +85,8 @@ class AdminServiceUpdate(BaseModel):
     income_limit: Decimal
     occupation: str
     state: str
+    eligibility_mode: Optional[str] = None
+    applicant_type: Optional[str] = None
 
 
 class AdminServiceStatus(BaseModel):
