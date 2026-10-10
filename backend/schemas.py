@@ -116,5 +116,6 @@ class EligibilityRuleUpdate(BaseModel):
     description: Optional[str] = None
 
 class EligibilityCheckRequest(BaseModel):
+    user_id: int
     service_id: int
     answers: Dict[str, Any] = {}    

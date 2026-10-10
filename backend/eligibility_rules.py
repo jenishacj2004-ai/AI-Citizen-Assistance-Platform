@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -40,16 +41,17 @@ def check_admin(user_id: int, db: Session):
 @router.get("")
 def get_eligibility_rules(
     user_id: int,
+    service_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
 
     check_admin(user_id, db)
 
-    rules = (
-        db.query(models.ServiceEligibilityRule)
-        .order_by(models.ServiceEligibilityRule.rule_id)
-        .all()
-    )
+    query = db.query(models.ServiceEligibilityRule)
+    if service_id is not None:
+        query = query.filter(models.ServiceEligibilityRule.service_id == service_id)
+
+    rules = query.order_by(models.ServiceEligibilityRule.rule_id).all()
 
     result = []
 
@@ -112,6 +114,25 @@ def create_eligibility_rule(
             detail="Government service not found"
         )
 
+    # Duplicate check: prevent inserting duplicate rules
+    existing_rule = (
+        db.query(models.ServiceEligibilityRule)
+        .filter(
+            models.ServiceEligibilityRule.service_id == rule.service_id,
+            models.ServiceEligibilityRule.field_name == rule.field_name,
+            models.ServiceEligibilityRule.rule_type == rule.rule_type,
+            models.ServiceEligibilityRule.operator == rule.operator,
+            models.ServiceEligibilityRule.rule_value == rule.rule_value,
+        )
+        .first()
+    )
+
+    if existing_rule:
+        raise HTTPException(
+            status_code=400,
+            detail=f"A rule for '{rule.field_name}' ({rule.rule_type}) already exists for this service."
+        )
+
     new_rule = models.ServiceEligibilityRule(
         service_id=rule.service_id,
         rule_type=rule.rule_type,
@@ -159,6 +180,26 @@ def update_eligibility_rule(
         raise HTTPException(
             status_code=404,
             detail="Eligibility rule not found"
+        )
+
+    # Prevent updating into an existing duplicate rule
+    duplicate = (
+        db.query(models.ServiceEligibilityRule)
+        .filter(
+            models.ServiceEligibilityRule.service_id == existing_rule.service_id,
+            models.ServiceEligibilityRule.field_name == rule.field_name,
+            models.ServiceEligibilityRule.rule_type == rule.rule_type,
+            models.ServiceEligibilityRule.operator == rule.operator,
+            models.ServiceEligibilityRule.rule_value == rule.rule_value,
+            models.ServiceEligibilityRule.rule_id != rule_id
+        )
+        .first()
+    )
+
+    if duplicate:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Another rule for '{rule.field_name}' ({rule.rule_type}) already exists for this service."
         )
 
     existing_rule.rule_type = rule.rule_type

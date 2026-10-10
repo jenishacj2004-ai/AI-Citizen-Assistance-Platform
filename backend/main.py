@@ -572,15 +572,13 @@ def upload_document(
         # -------------------------
 
         try:
-            os.remove(file_path)
+            if os.path.exists(file_path):
+                os.remove(file_path)
 
             # File is no longer permanently stored
-            file_path = Column(
-                String(500), 
-                nullable=True
-            )
-
+            document.file_path = None
             db.commit()
+            db.refresh(document)
 
         except Exception:
             pass

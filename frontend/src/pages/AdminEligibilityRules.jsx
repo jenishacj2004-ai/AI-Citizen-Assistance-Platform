@@ -10,9 +10,14 @@ function AdminEligibilityRules() {
   const userId = localStorage.getItem("user_id");
   const role = localStorage.getItem("user_role");
 
+  const [selectedServiceId, setSelectedServiceId] = useState(
+    serviceId ? Number(serviceId) : 12
+  );
+  const [allServices, setAllServices] = useState([]);
   const [rules, setRules] = useState([]);
   const [service, setService] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [editingRuleId, setEditingRuleId] = useState(null);
 
   const [form, setForm] = useState({
     rule_type: "REQUIREMENT",
@@ -30,16 +35,48 @@ function AdminEligibilityRules() {
       return;
     }
 
-    fetchRules();
-  }, [role, navigate, serviceId]);
+    fetchAllServices();
+  }, [role, navigate]);
 
-  // Fetch rules
-  const fetchRules = async () => {
+  useEffect(() => {
+    if (serviceId) {
+      setSelectedServiceId(Number(serviceId));
+    }
+  }, [serviceId]);
+
+  useEffect(() => {
+    if (selectedServiceId) {
+      fetchRulesForService(selectedServiceId);
+    }
+  }, [selectedServiceId]);
+
+  // Fetch all services for the dropdown
+  const fetchAllServices = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/admin/services?user_id=${userId}`
+      );
+      const data = await response.json();
+      if (response.ok) {
+        const servicesList = data.services || [];
+        setAllServices(servicesList);
+        const current = servicesList.find(
+          (s) => s.service_id === Number(selectedServiceId)
+        );
+        setService(current || null);
+      }
+    } catch (error) {
+      console.error("Failed to load services list", error);
+    }
+  };
+
+  // Fetch rules for the selected service
+  const fetchRulesForService = async (svcId) => {
     try {
       setLoading(true);
 
       const response = await fetch(
-        `${API_URL}/admin/eligibility-rules?user_id=${userId}`
+        `${API_URL}/admin/eligibility-rules?user_id=${userId}&service_id=${svcId}`
       );
 
       const data = await response.json();
@@ -49,16 +86,21 @@ function AdminEligibilityRules() {
         return;
       }
 
-      // Keep only rules belonging to this service
-      const serviceRules = (data.rules || []).filter(
-        (rule) => rule.service_id === Number(serviceId)
+      // Handle both raw list or { rules: [...] } response format safely
+      const allRules = Array.isArray(data) ? data : (data.rules || []);
+      const serviceRules = allRules.filter(
+        (rule) => rule.service_id === Number(svcId)
       );
 
       setRules(serviceRules);
 
-      // Get service information
-      await fetchService();
-
+      // Also ensure service details are updated
+      if (allServices.length > 0) {
+        const current = allServices.find(
+          (s) => s.service_id === Number(svcId)
+        );
+        setService(current || null);
+      }
     } catch (error) {
       console.error(error);
       alert("Unable to connect to backend");
@@ -67,25 +109,13 @@ function AdminEligibilityRules() {
     }
   };
 
-  // Fetch service information
-  const fetchService = async () => {
-    try {
-      const response = await fetch(
-        `${API_URL}/admin/services?user_id=${userId}`
-      );
-
-      const data = await response.json();
-
-      if (response.ok) {
-        const selectedService = (data.services || []).find(
-          (item) => item.service_id === Number(serviceId)
-        );
-
-        setService(selectedService || null);
-      }
-    } catch (error) {
-      console.error(error);
-    }
+  // Handle service selector change
+  const handleServiceChange = (e) => {
+    const newId = Number(e.target.value);
+    setSelectedServiceId(newId);
+    setEditingRuleId(null);
+    resetForm();
+    navigate(`/admin/services/${newId}/eligibility-rules`);
   };
 
   // Handle form changes
@@ -96,55 +126,105 @@ function AdminEligibilityRules() {
     });
   };
 
-  // Add rule
-  const handleAddRule = async (e) => {
+  const resetForm = () => {
+    setForm({
+      rule_type: "REQUIREMENT",
+      field_name: "",
+      operator: "==",
+      rule_value: "",
+      logical_group: 1,
+      description: "",
+    });
+    setEditingRuleId(null);
+  };
+
+  // Start editing a rule
+  const handleEditClick = (rule) => {
+    setEditingRuleId(rule.rule_id);
+    setForm({
+      rule_type: rule.rule_type,
+      field_name: rule.field_name,
+      operator: rule.operator,
+      rule_value: String(rule.rule_value),
+      logical_group: rule.logical_group || 1,
+      description: rule.description || "",
+    });
+    window.scrollTo({ top: 180, behavior: "smooth" });
+  };
+
+  // Save (Add or Update) rule
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.field_name || !form.rule_value) {
+    if (!form.field_name || form.rule_value === "") {
       alert("Please enter field name and rule value");
       return;
     }
 
     try {
-      const response = await fetch(
-        `${API_URL}/admin/eligibility-rules?user_id=${userId}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            service_id: Number(serviceId),
-            rule_type: form.rule_type,
-            field_name: form.field_name,
-            operator: form.operator,
-            rule_value: form.rule_value,
-            logical_group: Number(form.logical_group),
-            description: form.description,
-          }),
+      if (editingRuleId) {
+        // UPDATE existing rule
+        const response = await fetch(
+          `${API_URL}/admin/eligibility-rules/${editingRuleId}?user_id=${userId}`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              rule_type: form.rule_type,
+              field_name: form.field_name.trim(),
+              operator: form.operator,
+              rule_value: form.rule_value.trim(),
+              logical_group: Number(form.logical_group),
+              description: form.description ? form.description.trim() : null,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.detail || "Failed to update eligibility rule");
+          return;
         }
-      );
 
-      const data = await response.json();
+        alert("Eligibility rule updated successfully");
+        resetForm();
+        fetchRulesForService(selectedServiceId);
 
-      if (!response.ok) {
-        alert(data.detail || "Failed to add rule");
-        return;
+      } else {
+        // CREATE new rule
+        const response = await fetch(
+          `${API_URL}/admin/eligibility-rules?user_id=${userId}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              service_id: Number(selectedServiceId),
+              rule_type: form.rule_type,
+              field_name: form.field_name.trim(),
+              operator: form.operator,
+              rule_value: form.rule_value.trim(),
+              logical_group: Number(form.logical_group),
+              description: form.description ? form.description.trim() : null,
+            }),
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          alert(data.detail || "Failed to add rule");
+          return;
+        }
+
+        alert("Eligibility rule added successfully");
+        resetForm();
+        fetchRulesForService(selectedServiceId);
       }
-
-      alert("Eligibility rule added successfully");
-
-      setForm({
-        rule_type: "REQUIREMENT",
-        field_name: "",
-        operator: "==",
-        rule_value: "",
-        logical_group: 1,
-        description: "",
-      });
-
-      fetchRules();
-
     } catch (error) {
       console.error(error);
       alert("Unable to connect to backend");
@@ -177,8 +257,10 @@ function AdminEligibilityRules() {
       }
 
       alert("Eligibility rule deleted successfully");
-
-      fetchRules();
+      if (editingRuleId === ruleId) {
+        resetForm();
+      }
+      fetchRulesForService(selectedServiceId);
 
     } catch (error) {
       console.error(error);
@@ -190,67 +272,139 @@ function AdminEligibilityRules() {
     <div className="min-h-screen bg-[#0b1220] text-white">
 
       {/* Header */}
-      <header className="flex items-center justify-between border-b border-gray-700 bg-[#111c30] px-6 py-4">
+      <header className="flex flex-col gap-4 border-b border-gray-700 bg-[#111c30] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
 
         <div>
           <h1 className="text-2xl font-bold">
-            Eligibility Rules
+            Eligibility Rules Management
           </h1>
 
           <p className="text-sm text-gray-400">
-            {service?.service_name || "Government Service"}
+            {service?.service_name || "Government Service"} (ID: {selectedServiceId})
           </p>
         </div>
 
-        <button
-          onClick={() => navigate("/admin/services")}
-          className="rounded-lg bg-gray-600 px-4 py-2 hover:bg-gray-700"
-        >
-          Back to Services
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate("/admin/services")}
+            className="rounded-lg bg-gray-600 px-4 py-2 hover:bg-gray-700"
+          >
+            Manage Services
+          </button>
+          <button
+            onClick={() => navigate("/admin")}
+            className="rounded-lg bg-indigo-600 px-4 py-2 hover:bg-indigo-700"
+          >
+            Admin Dashboard
+          </button>
+        </div>
 
       </header>
 
       <main className="p-6">
 
-        {/* Service information */}
-        {service && (
-          <div className="mb-6 rounded-xl border border-gray-700 bg-[#111c30] p-6">
-
-            <h2 className="text-xl font-semibold">
-              {service.service_name}
-            </h2>
-
-            <p className="mt-1 text-sm text-blue-400">
-              {service.department}
-            </p>
-
-            <p className="mt-3 text-sm text-gray-400">
-              Eligibility Mode:{" "}
-              <span className="text-white">
-                {service.eligibility_mode || "Rule Based"}
-              </span>
-            </p>
-
-          </div>
-        )}
-
-        {/* Add Rule */}
+        {/* Service Selector & Information */}
         <div className="mb-6 rounded-xl border border-gray-700 bg-[#111c30] p-6">
 
-          <h2 className="mb-5 text-xl font-semibold">
-            Add Eligibility Rule
-          </h2>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                Select Government Service
+              </label>
+
+              <select
+                value={selectedServiceId}
+                onChange={handleServiceChange}
+                className="mt-1 rounded-lg border border-gray-600 bg-[#0b1220] px-4 py-2 text-white font-medium focus:border-blue-500 focus:outline-none"
+              >
+                {allServices.map((svc) => (
+                  <option key={svc.service_id} value={svc.service_id}>
+                    {svc.service_id} - {svc.service_name} ({svc.status})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {service && (
+              <div className="text-right">
+                <span
+                  className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                    service.status === "Active"
+                      ? "bg-green-900/60 text-green-300 border border-green-500/30"
+                      : "bg-red-900/60 text-red-300 border border-red-500/30"
+                  }`}
+                >
+                  ● {service.status}
+                </span>
+                <p className="mt-1 text-sm text-gray-400">
+                  Eligibility Mode:{" "}
+                  <span className="font-semibold text-white">
+                    {service.eligibility_mode || "Rule Based"}
+                  </span>
+                </p>
+              </div>
+            )}
+
+          </div>
+
+          {service && (
+            <div className="mt-4 border-t border-gray-700/60 pt-4">
+              <h2 className="text-xl font-bold text-white">
+                {service.service_name}
+              </h2>
+              <p className="text-sm text-blue-400">
+                {service.department}
+              </p>
+              <p className="mt-2 text-xs text-gray-300 max-w-4xl">
+                {service.description}
+              </p>
+            </div>
+          )}
+
+        </div>
+
+        {/* Add / Edit Rule Form */}
+        <div
+          id="rule-form"
+          className={`mb-6 rounded-xl border p-6 transition-all ${
+            editingRuleId
+              ? "border-amber-500/60 bg-[#162238] shadow-lg shadow-amber-500/5"
+              : "border-gray-700 bg-[#111c30]"
+          }`}
+        >
+
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">
+              {editingRuleId ? (
+                <span className="text-amber-300">
+                  ✎ Edit Eligibility Rule #{editingRuleId}
+                </span>
+              ) : (
+                "+ Add Eligibility Rule"
+              )}
+            </h2>
+
+            {editingRuleId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-lg bg-gray-600 px-3 py-1 text-xs font-medium text-white hover:bg-gray-500"
+              >
+                Cancel Edit
+              </button>
+            )}
+          </div>
 
           <form
-            onSubmit={handleAddRule}
+            onSubmit={handleFormSubmit}
             className="grid grid-cols-1 gap-4 md:grid-cols-2"
           >
 
             {/* Rule Type */}
             <div>
               <label className="mb-1 block text-sm text-gray-400">
-                Rule Type
+                Rule Type <span className="text-red-400">*</span>
               </label>
 
               <select
@@ -260,11 +414,11 @@ function AdminEligibilityRules() {
                 className="w-full rounded-lg border border-gray-600 bg-[#0b1220] px-3 py-2 text-white"
               >
                 <option value="REQUIREMENT">
-                  Requirement
+                  REQUIREMENT (Must be satisfied)
                 </option>
 
                 <option value="EXCLUSION">
-                  Exclusion
+                  EXCLUSION (Matching disqualifies applicant)
                 </option>
               </select>
             </div>
@@ -272,7 +426,7 @@ function AdminEligibilityRules() {
             {/* Field Name */}
             <div>
               <label className="mb-1 block text-sm text-gray-400">
-                Field Name
+                Field Name <span className="text-red-400">*</span>
               </label>
 
               <input
@@ -280,7 +434,7 @@ function AdminEligibilityRules() {
                 name="field_name"
                 value={form.field_name}
                 onChange={handleChange}
-                placeholder="Example: landholder"
+                placeholder="Example: landholder, aadhaar_verified, income_tax_payer"
                 className="w-full rounded-lg border border-gray-600 bg-[#0b1220] px-3 py-2 text-white"
               />
             </div>
@@ -288,7 +442,7 @@ function AdminEligibilityRules() {
             {/* Operator */}
             <div>
               <label className="mb-1 block text-sm text-gray-400">
-                Operator
+                Operator <span className="text-red-400">*</span>
               </label>
 
               <select
@@ -297,19 +451,19 @@ function AdminEligibilityRules() {
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-600 bg-[#0b1220] px-3 py-2 text-white"
               >
-                <option value="==">==</option>
-                <option value="!=">!=</option>
-                <option value=">">Greater than</option>
-                <option value=">=">Greater than or equal</option>
-                <option value="<">Less than</option>
-                <option value="<=">Less than or equal</option>
+                <option value="==">== (Equals)</option>
+                <option value="!=">!= (Not equals)</option>
+                <option value=">">&gt; (Greater than)</option>
+                <option value=">=">&gt;= (Greater than or equal)</option>
+                <option value="<">&lt; (Less than)</option>
+                <option value="<=">&lt;= (Less than or equal)</option>
               </select>
             </div>
 
             {/* Rule Value */}
             <div>
               <label className="mb-1 block text-sm text-gray-400">
-                Rule Value
+                Rule Value <span className="text-red-400">*</span>
               </label>
 
               <input
@@ -317,7 +471,7 @@ function AdminEligibilityRules() {
                 name="rule_value"
                 value={form.rule_value}
                 onChange={handleChange}
-                placeholder="Example: true"
+                placeholder="Example: true, false, 10000"
                 className="w-full rounded-lg border border-gray-600 bg-[#0b1220] px-3 py-2 text-white"
               />
             </div>
@@ -325,7 +479,7 @@ function AdminEligibilityRules() {
             {/* Logical Group */}
             <div>
               <label className="mb-1 block text-sm text-gray-400">
-                Logical Group
+                Logical Group (Default: 1)
               </label>
 
               <input
@@ -336,12 +490,15 @@ function AdminEligibilityRules() {
                 min="1"
                 className="w-full rounded-lg border border-gray-600 bg-[#0b1220] px-3 py-2 text-white"
               />
+              <p className="mt-1 text-xs text-gray-500">
+                Rules in the same group are combined with AND. Different requirement groups form alternative paths (OR).
+              </p>
             </div>
 
             {/* Description */}
             <div>
               <label className="mb-1 block text-sm text-gray-400">
-                Description
+                Description / Question Context
               </label>
 
               <input
@@ -349,20 +506,34 @@ function AdminEligibilityRules() {
                 name="description"
                 value={form.description}
                 onChange={handleChange}
-                placeholder="Explain this eligibility rule"
+                placeholder="Official criterion or question explanation"
                 className="w-full rounded-lg border border-gray-600 bg-[#0b1220] px-3 py-2 text-white"
               />
             </div>
 
             {/* Submit */}
-            <div className="md:col-span-2">
+            <div className="flex items-center gap-3 md:col-span-2 pt-2">
 
               <button
                 type="submit"
-                className="rounded-lg bg-blue-600 px-5 py-2 font-medium hover:bg-blue-700"
+                className={`rounded-lg px-6 py-2.5 font-medium text-white transition ${
+                  editingRuleId
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-blue-600 hover:bg-blue-700"
+                }`}
               >
-                + Add Rule
+                {editingRuleId ? "Save Changes" : "+ Add Rule"}
               </button>
+
+              {editingRuleId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-lg bg-gray-600 px-5 py-2.5 font-medium text-white hover:bg-gray-500"
+                >
+                  Cancel
+                </button>
+              )}
 
             </div>
 
@@ -373,66 +544,121 @@ function AdminEligibilityRules() {
         {/* Existing Rules */}
         <div className="rounded-xl border border-gray-700 bg-[#111c30] p-6">
 
-          <h2 className="mb-5 text-xl font-semibold">
-            Existing Eligibility Rules
-          </h2>
+          <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">
+                Configured Rules for {service?.service_name || `Service #${selectedServiceId}`}
+              </h2>
+              <p className="text-sm text-gray-400">
+                Total rules configured: {rules.length}
+              </p>
+            </div>
+
+            <button
+              onClick={() => fetchRulesForService(selectedServiceId)}
+              className="rounded-lg border border-gray-600 bg-[#0b1220] px-3 py-1.5 text-xs text-gray-300 hover:text-white"
+            >
+              ↻ Refresh Rules
+            </button>
+          </div>
 
           {loading ? (
-            <p className="text-gray-400">
+            <div className="py-8 text-center text-gray-400">
               Loading rules...
-            </p>
+            </div>
           ) : rules.length === 0 ? (
-            <p className="text-gray-400">
-              No eligibility rules have been added for this service.
-            </p>
+            <div className="rounded-lg border border-dashed border-gray-700 py-10 text-center text-gray-400">
+              No eligibility rules have been configured for this service yet. Use the form above to add rules.
+            </div>
           ) : (
             <div className="space-y-4">
 
-              {rules.map((rule) => (
+              {rules.map((rule) => {
+                const isExclusion = rule.rule_type === "EXCLUSION";
+                const isEditing = editingRuleId === rule.rule_id;
 
-                <div
-                  key={rule.rule_id}
-                  className="rounded-lg border border-gray-700 bg-[#0b1220] p-4"
-                >
+                return (
+                  <div
+                    key={rule.rule_id}
+                    className={`rounded-xl border p-4 transition ${
+                      isEditing
+                        ? "border-amber-500 bg-[#142036]"
+                        : isExclusion
+                        ? "border-rose-900/60 bg-[#14121e]"
+                        : "border-blue-900/60 bg-[#0f172a]"
+                    }`}
+                  >
 
-                  <div className="flex flex-col justify-between gap-4 md:flex-row">
+                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
 
-                    <div>
+                      <div className="space-y-2">
 
-                      <p className="font-semibold">
-                        {rule.field_name}{" "}
-                        <span className="text-blue-400">
-                          {rule.operator}
-                        </span>{" "}
-                        {rule.rule_value}
-                      </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Rule Type Badge */}
+                          <span
+                            className={`rounded-full px-3 py-0.5 text-xs font-bold ${
+                              isExclusion
+                                ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                            }`}
+                          >
+                            {rule.rule_type}
+                          </span>
 
-                      <p className="mt-1 text-sm text-gray-400">
-                        Type: {rule.rule_type}
-                      </p>
+                          {/* Logical Group Badge */}
+                          <span className="rounded-full bg-purple-500/20 px-2.5 py-0.5 text-xs font-semibold text-purple-300 border border-purple-500/30">
+                            Group {rule.logical_group || 1}
+                          </span>
 
-                      {rule.description && (
-                        <p className="mt-2 text-sm text-gray-300">
-                          {rule.description}
+                          <span className="text-xs text-gray-500">
+                            ID: #{rule.rule_id}
+                          </span>
+                        </div>
+
+                        {/* Condition Expression */}
+                        <p className="font-mono text-base font-semibold text-white">
+                          <span className="text-cyan-300">{rule.field_name}</span>{" "}
+                          <span className="text-yellow-400">{rule.operator}</span>{" "}
+                          <span className="text-emerald-300">{rule.rule_value}</span>
                         </p>
-                      )}
+
+                        {/* Description */}
+                        {rule.description ? (
+                          <p className="text-sm text-gray-300">
+                            {rule.description}
+                          </p>
+                        ) : (
+                          <p className="text-xs italic text-gray-500">
+                            No description provided.
+                          </p>
+                        )}
+
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2 shrink-0">
+
+                        <button
+                          onClick={() => handleEditClick(rule)}
+                          className="rounded-lg bg-blue-600/30 border border-blue-500/40 px-3.5 py-1.5 text-xs font-medium text-blue-200 hover:bg-blue-600 hover:text-white transition"
+                        >
+                          ✎ Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteRule(rule.rule_id)}
+                          className="rounded-lg bg-red-600/30 border border-red-500/40 px-3.5 py-1.5 text-xs font-medium text-red-200 hover:bg-red-600 hover:text-white transition"
+                        >
+                          ✕ Delete
+                        </button>
+
+                      </div>
 
                     </div>
 
-                    <button
-                      onClick={() =>
-                        handleDeleteRule(rule.rule_id)
-                      }
-                      className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium hover:bg-red-700"
-                    >
-                      Delete
-                    </button>
-
                   </div>
-
-                </div>
-
-              ))}
+                );
+              })}
 
             </div>
           )}
